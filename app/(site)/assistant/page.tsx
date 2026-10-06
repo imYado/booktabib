@@ -3,12 +3,14 @@ import Link from 'next/link'
 import { Icon } from '@/components/Icon'
 import { PickerForm } from '@/components/PickerForm'
 import { StatusButton } from '@/components/StatusButton'
+import { headers } from 'next/headers'
+import { SendLink } from '@/components/SendLink'
 import { StatusPill } from '@/components/StatusPill'
-import { clinics, getClinic, getDoctor } from '@/lib/data'
+import { clinics, getClinic, getDoctor, whatsappNumber } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
-import { listBookings } from '@/lib/store'
+import { listBookings, type Booking } from '@/lib/store'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
@@ -27,6 +29,23 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
     listBookings({ clinicId: clinic.id, date: today, status: ['approved', 'in_progress', 'done'] }),
   ])
   const serving = queue.filter((b) => b.status === 'in_progress')
+
+  const h = await headers()
+  const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}`
+  const linkButtons = (b: Booking) => {
+    const url = `${origin}/q/${b.liveToken}`
+    const phone = whatsappNumber(b.phone)
+    const message = t.assistant.linkMessage.replace('{name}', b.patientName).replace('{url}', url)
+    return (
+      <SendLink
+        url={url}
+        whatsappHref={phone.length >= 8 ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : null}
+        sendLabel={t.assistant.sendLink}
+        copyLabel={t.assistant.copyLink}
+        copiedLabel={t.assistant.copied}
+      />
+    )
+  }
 
   return (
     <section className="section-tight">
@@ -89,6 +108,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                     <div className="actions row">
                       {b.status === 'approved' && <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />}
                       {b.status === 'in_progress' && <StatusButton id={b.id} status="done" label={t.assistant.done} primary />}
+                      {b.status !== 'done' && linkButtons(b)}
                     </div>
                   </li>
                 ))}
@@ -119,6 +139,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                     <div className="row">
                       <StatusButton id={b.id} status="approved" label={t.assistant.approve} primary />
                       <StatusButton id={b.id} status="cancelled" label={t.assistant.cancel} />
+                      {linkButtons(b)}
                     </div>
                   </li>
                 ))}

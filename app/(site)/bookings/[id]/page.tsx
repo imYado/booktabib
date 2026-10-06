@@ -17,8 +17,18 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function BookingPage({ params }: Props) {
   const { locale, t } = await getI18n()
-  const booking = await getBooking((await params).id)
   const user = await getCurrentUser()
+  const found = await getBooking((await params).id)
+  // Full booking details are only for the patient's own account and the clinic's staff.
+  // Anyone else uses the live link, which shows much less.
+  const allowed =
+    found &&
+    user &&
+    (found.userId === user.id ||
+      user.role === 'admin' ||
+      (user.role === 'assistant' && user.clinicId === found.clinicId) ||
+      (user.role === 'doctor' && user.doctorId === found.doctorId))
+  const booking = allowed ? found : undefined
 
   if (!booking) {
     return (
@@ -75,6 +85,9 @@ export default async function BookingPage({ params }: Props) {
           {user?.id === booking.userId && canUpdateBooking(user, booking, 'cancelled') && (
             <StatusButton id={booking.id} status="cancelled" label={t.account.cancel} size="md" />
           )}
+          <Link href={`/q/${booking.liveToken}`} className="btn">
+            {t.live.title}
+          </Link>
           <Link href={user?.role === 'patient' ? '/account' : '/'} className="btn btn-secondary">
             {user?.role === 'patient' ? t.nav.account : t.booking.backHome}
           </Link>

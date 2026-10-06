@@ -46,6 +46,11 @@ export const bookings = pgTable(
     ticket: integer('ticket'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     calledAt: bigint('called_at', { mode: 'number' }),
+    // Secret for the patient's live queue link (/q/<token>). 256 random bits, so it cannot be guessed.
+    liveToken: text('live_token')
+      .notNull()
+      .unique()
+      .default(sql`replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '')`),
   },
   (t) => [
     // One active booking per doctor per slot; cancelled ones free the slot.

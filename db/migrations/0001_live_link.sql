@@ -1,0 +1,2 @@
+ALTER TABLE "bookings" ADD COLUMN "live_token" text DEFAULT replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '') NOT NULL;--> statement-breakpoint
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_live_token_unique" UNIQUE("live_token");
