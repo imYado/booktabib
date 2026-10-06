@@ -12,25 +12,56 @@ npm run lint
 npm run typecheck
 ```
 
+Locally no database setup is needed: without `DATABASE_URL` the app uses an embedded Postgres
+(PGlite) stored in `.pglite/`, and fills it with demo data the first time it starts. Delete
+`.pglite/` to start over. Demo accounts all use the password `booktabib-demo`:
+
+| Email | Role |
+|---|---|
+| `admin@example.com` | Administrator |
+| `assistant@example.com` | Assistant at Shifa Family Clinic |
+| `doctor@example.com` | Dr. Sara Ahmed |
+| `patient@example.com` | Patient |
+
+## Putting it online (Vercel + Neon)
+
+1. Import this repository at [vercel.com/new](https://vercel.com/new). Vercel detects Next.js.
+2. In the Vercel project, open **Storage**, add **Neon Postgres** and connect it to the project.
+   This sets `DATABASE_URL`.
+3. In **Settings → Environment Variables**, add `ADMIN_EMAIL` with the email you will use as
+   administrator.
+4. Redeploy. Every deploy runs the database migrations first (`vercel-build` script).
+5. Open the site, choose **Log in → Create an account** with your `ADMIN_EMAIL`, and you land on
+   the **Staff** page, where you create accounts for clinic assistants and doctors.
+
+A production database starts empty. To fill a preview database with the demo accounts and
+bookings, run `DATABASE_URL=... npm run db:seed-demo` once.
+
 ## What's here
 
 Next.js (App Router) in English, Arabic and Kurdish Sorani. The language is kept in a cookie and the
 whole layout flips to right-to-left for Arabic and Kurdish. Fonts (Archivo, Hanken Grotesk,
-Vazirmatn) are self-hosted through `next/font`.
+Vazirmatn) are self-hosted through `next/font`. The design tokens and components live in
+`app/globals.css` and follow the design spec.
 
-| Path | What it is |
-|---|---|
-| `/` | Home: search, featured clinics, specialties |
-| `/clinics` | Clinic search with city and specialty filters |
-| `/clinics/[id]` | Clinic profile and its doctors |
-| `/doctors/[id]` | Doctor profile and appointment request form |
-| `/bookings/[id]` | Booking confirmation and status |
-| `/assistant` | Assistant desk: approve or cancel requests, call patients in |
-| `/doctor` | Doctor dashboard: today's patients, current patient, weekly chart |
-| `/screen?clinic=…` | Clinic TV screen showing who is being served, refreshes every 5 seconds |
+| Path | Who | What it is |
+|---|---|---|
+| `/` | Everyone | Home: search, featured clinics, specialties |
+| `/clinics` | Everyone | Clinic search with city and specialty filters |
+| `/clinics/[id]` | Everyone | Clinic profile and its doctors |
+| `/doctors/[id]` | Everyone | Doctor profile and appointment request form |
+| `/bookings/[id]` | Anyone with the link | Booking status (references are random) |
+| `/login`, `/register` | Everyone | Patients sign up; staff accounts come from an administrator |
+| `/account` | Signed in | My bookings, with cancelling |
+| `/assistant` | Assistants, admins | Approve or cancel requests, call patients in |
+| `/doctor` | Doctors, admins | Today's patients, current patient, weekly chart |
+| `/screen` | Assistants, admins | Clinic TV showing who is being served, refreshes every 5 seconds |
+| `/admin` | Admins | Create staff accounts |
 
-The design tokens and components live in `app/globals.css` and follow the design spec.
+### Data
 
-**Preview only:** clinics and doctors are fictional sample data (`lib/data.ts`), bookings are held
-in memory (`lib/store.ts`) and reset when the server restarts, and the `/assistant` and `/doctor`
-pages have no login yet.
+- **Bookings, accounts and sessions** are in Postgres (`db/schema.ts`), through Drizzle ORM.
+  After changing the schema, run `npm run db:generate` and commit the new file in `db/migrations/`.
+- **Clinics and doctors** are still the fictional sample list in `lib/data.ts`. Replace it with real
+  clinics when you have them.
+- Passwords are hashed with scrypt. Sessions are random tokens in an http-only cookie, stored hashed.

@@ -6,6 +6,7 @@ import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
 import { cities, getClinic, getDoctor, isWorkingDay, specialties } from '@/lib/data'
 import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
+import { getCurrentUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { openSlots } from '@/lib/store'
 
@@ -35,9 +36,11 @@ export default async function DoctorPage({ params, searchParams }: Props) {
   const clinic = getClinic(doctor.clinicId)!
   const { day, error } = await searchParams
 
+  const user = await getCurrentUser()
   const days = upcomingDays(7)
-  const selected = day && days.includes(day) ? day : (days.find((d) => openSlots(doctor.id, d).length) ?? days[0])
-  const slots = openSlots(doctor.id, selected)
+  const slotsByDay = await Promise.all(days.map((d) => openSlots(doctor.id, d)))
+  const selected = day && days.includes(day) ? day : (days.find((_, i) => slotsByDay[i].length) ?? days[0])
+  const slots = slotsByDay[days.indexOf(selected)]
 
   return (
     <section className="section-tight">
@@ -105,7 +108,15 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             </fieldset>
             <div className="field">
               <label htmlFor="patientName">{t.doctorProfile.name}</label>
-              <input id="patientName" name="patientName" className="input" required maxLength={80} autoComplete="name" />
+              <input
+                id="patientName"
+                name="patientName"
+                className="input"
+                required
+                maxLength={80}
+                autoComplete="name"
+                defaultValue={user?.role === 'patient' ? user.name : undefined}
+              />
             </div>
             <div className="field">
               <label htmlFor="phone">{t.doctorProfile.phone}</label>
@@ -119,6 +130,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                 autoComplete="tel"
                 dir="ltr"
                 placeholder="+964"
+                defaultValue={user?.role === 'patient' ? user.phone : undefined}
               />
             </div>
             <div className="field">
@@ -127,7 +139,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             </div>
             {error && (
               <p className="notice" role="alert">
-                {t.doctorProfile.taken}
+                {error === 'taken' ? t.doctorProfile.taken : t.auth.missing}
               </p>
             )}
             <button className="btn btn-block" type="submit" disabled={!slots.length}>

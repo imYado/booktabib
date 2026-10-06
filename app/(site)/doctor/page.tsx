@@ -6,6 +6,7 @@ import { StatusPill } from '@/components/StatusPill'
 import { WeekChart } from '@/components/WeekChart'
 import { doctors, getClinic, getDoctor } from '@/lib/data'
 import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
+import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { listBookings } from '@/lib/store'
 
@@ -16,11 +17,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function DoctorDashboard({ searchParams }: { searchParams: Promise<{ doctor?: string }> }) {
   const { locale, t } = await getI18n()
-  const doctor = getDoctor((await searchParams).doctor ?? '') ?? doctors[0]
+  const user = await requireUser(['doctor', 'admin'], '/doctor')
+  // Doctors see their own day; administrators can look at any doctor.
+  const doctor = (user.role === 'doctor' ? getDoctor(user.doctorId ?? '') : getDoctor((await searchParams).doctor ?? '')) ?? doctors[0]
   const clinic = getClinic(doctor.clinicId)!
   const today = todayISO()
 
-  const mine = listBookings({ doctorId: doctor.id })
+  const mine = await listBookings({ doctorId: doctor.id, fromDate: today })
   const todays = mine.filter((b) => b.date === today && b.status !== 'pending' && b.status !== 'cancelled')
   const waiting = todays.filter((b) => b.status === 'approved')
   const seen = todays.filter((b) => b.status === 'done')
@@ -55,13 +58,15 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
               </p>
             </div>
           </div>
-          <PickerForm
-            name="doctor"
-            label={t.doctorDash.doctor}
-            value={doctor.id}
-            options={doctors.map((d) => ({ value: d.id, label: d.name[locale] }))}
-            submit={t.common.show}
-          />
+          {user.role === 'admin' && (
+            <PickerForm
+              name="doctor"
+              label={t.doctorDash.doctor}
+              value={doctor.id}
+              options={doctors.map((d) => ({ value: d.id, label: d.name[locale] }))}
+              submit={t.common.show}
+            />
+          )}
         </div>
 
         <div className="stats">

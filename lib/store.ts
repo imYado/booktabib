@@ -1,160 +1,141 @@
 import 'server-only'
-import { dailySlots, doctors, getDoctor, isWorkingDay } from './data'
-import { addDays, todayISO } from './format'
+import { and, asc, desc, eq, gte, inArray, ne, sql, type SQL } from 'drizzle-orm'
+import { getDb } from '@/db'
+import { bookings, type Booking, type BookingStatus } from '@/db/schema'
+import { dailySlots, getDoctor, isWorkingDay } from './data'
+import { CLINIC_TIME_ZONE, todayISO } from './format'
+import { randomId } from './ids'
 
-// In-memory booking store for previewing the site. Data resets whenever the
-// server restarts; it will be replaced by a real database.
+export type { Booking, BookingStatus }
 
-export type BookingStatus = 'pending' | 'approved' | 'cancelled' | 'in_progress' | 'done'
+export class SlotTakenError extends Error {}
 
-export type Booking = {
-  id: string
-  doctorId: string
-  clinicId: string
-  date: string // YYYY-MM-DD
-  time: string // HH:mm
-  patientName: string
-  phone: string
-  note: string
-  status: BookingStatus
-  ticket: number | null
-  createdAt: number
-  calledAt: number | null
-}
-
-type Store = { bookings: Booking[]; seq: number }
-
-const globalStore = globalThis as unknown as { __booktabibStore?: Store }
-
-function store(): Store {
-  if (!globalStore.__booktabibStore) {
-    globalStore.__booktabibStore = { bookings: [], seq: 1000 }
-    seed(globalStore.__booktabibStore)
+function isUniqueViolation(err: unknown): boolean {
+  for (let e = err as { code?: string; cause?: unknown } | undefined; e; e = e.cause as typeof e) {
+    if (e.code === '23505') return true
   }
-  return globalStore.__booktabibStore
+  return false
 }
 
-function newId(s: Store) {
-  s.seq += 1
-  return `BT${s.seq}`
+type Filter = {
+  clinicId?: string
+  doctorId?: string
+  userId?: string
+  date?: string
+  fromDate?: string
+  status?: BookingStatus | BookingStatus[]
 }
 
-function nextTicket(s: Store, clinicId: string, date: string) {
-  const used = s.bookings.filter((b) => b.clinicId === clinicId && b.date === date && b.ticket !== null)
-  return used.reduce((max, b) => Math.max(max, b.ticket ?? 0), 0) + 1
-}
-
-const samplePatients = [
-  'Aram Kamal', 'Shilan Omar', 'أحمد جاسم', 'Zhwan Ali', 'فاطمة حسين', 'Rawa Sabir',
-  'Hezha Majid', 'زينب كريم', 'Lana Fattah', 'Diyar Hama', 'مريم سعد', 'Soran Qadir',
-]
-
-function seed(s: Store) {
-  const today = todayISO()
-  let p = 0
-  const take = () => samplePatients[p++ % samplePatients.length]
-  const add = (doctorId: string, date: string, time: string, status: BookingStatus) => {
-    const doctor = getDoctor(doctorId)!
-    const ticket = status === 'pending' || status === 'cancelled' ? null : nextTicket(s, doctor.clinicId, date)
-    s.bookings.push({
-      id: newId(s),
-      doctorId,
-      clinicId: doctor.clinicId,
-      date,
-      time,
-      patientName: take(),
-      phone: '+964 750 000 0000',
-      note: '',
-      status,
-      ticket,
-      createdAt: Date.now() - 86_400_000,
-      calledAt: status === 'in_progress' ? Date.now() - 300_000 : null,
-    })
+export async function listBookings(filter: Filter = {}): Promise<Booking[]> {
+  const where: SQL[] = []
+  if (filter.clinicId) where.push(eq(bookings.clinicId, filter.clinicId))
+  if (filter.doctorId) where.push(eq(bookings.doctorId, filter.doctorId))
+  if (filter.userId) where.push(eq(bookings.userId, filter.userId))
+  if (filter.date) where.push(eq(bookings.date, filter.date))
+  if (filter.fromDate) where.push(gte(bookings.date, filter.fromDate))
+  if (filter.status) {
+    where.push(Array.isArray(filter.status) ? inArray(bookings.status, filter.status) : eq(bookings.status, filter.status))
   }
-
-  for (const d of doctors) {
-    // Today: one patient done, one with the doctor, two waiting, one request to review.
-    add(d.id, today, '09:00', 'done')
-    add(d.id, today, '09:30', 'in_progress')
-    add(d.id, today, '10:30', 'approved')
-    add(d.id, today, '11:30', 'approved')
-    add(d.id, today, '13:00', 'pending')
-    // The rest of the week.
-    for (let i = 1; i <= 6; i++) {
-      const date = addDays(today, i)
-      if (!isWorkingDay(date)) continue
-      const count = (i + d.years) % 4
-      for (let j = 0; j < count; j++) add(d.id, date, dailySlots[j * 2 + 1], j === 0 ? 'pending' : 'approved')
-    }
-  }
+  const db = await getDb()
+  return db
+    .select()
+    .from(bookings)
+    .where(and(...where))
+    .orderBy(asc(bookings.date), asc(bookings.time))
 }
 
-export function listBookings(filter: Partial<Pick<Booking, 'clinicId' | 'doctorId' | 'date' | 'status'>> = {}) {
-  return store()
-    .bookings.filter((b) =>
-      (Object.keys(filter) as (keyof typeof filter)[]).every((k) => b[k] === filter[k]),
-    )
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+export async function getBooking(id: string): Promise<Booking | undefined> {
+  const db = await getDb()
+  const [row] = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1)
+  return row
 }
 
-export function getBooking(id: string) {
-  return store().bookings.find((b) => b.id === id)
+function nowHHMM() {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: CLINIC_TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: false }).format(
+    new Date(),
+  )
 }
 
 /** Slots on a given day that are still free for a doctor. */
-export function openSlots(doctorId: string, date: string) {
+export async function openSlots(doctorId: string, date: string): Promise<string[]> {
   if (!isWorkingDay(date)) return []
-  const taken = new Set(
-    store()
-      .bookings.filter((b) => b.doctorId === doctorId && b.date === date && b.status !== 'cancelled')
-      .map((b) => b.time),
-  )
-  let slots = dailySlots.filter((t) => !taken.has(t))
-  if (date === todayISO()) {
-    const now = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Baghdad', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
-    slots = slots.filter((t) => t > now)
-  }
-  return slots
+  const db = await getDb()
+  const taken = await db
+    .select({ time: bookings.time })
+    .from(bookings)
+    .where(and(eq(bookings.doctorId, doctorId), eq(bookings.date, date), ne(bookings.status, 'cancelled')))
+  const takenSet = new Set(taken.map((b) => b.time))
+  const now = date === todayISO() ? nowHHMM() : ''
+  return dailySlots.filter((t) => !takenSet.has(t) && t > now)
 }
 
-export function createBooking(input: { doctorId: string; date: string; time: string; patientName: string; phone: string; note: string }) {
+export async function createBooking(input: {
+  doctorId: string
+  date: string
+  time: string
+  patientName: string
+  phone: string
+  note: string
+  userId: string | null
+}): Promise<Booking> {
   const doctor = getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
-  if (!openSlots(doctor.id, input.date).includes(input.time)) throw new Error('Slot not available')
-  const s = store()
-  const booking: Booking = {
-    id: newId(s),
-    doctorId: doctor.id,
-    clinicId: doctor.clinicId,
-    date: input.date,
-    time: input.time,
-    patientName: input.patientName,
-    phone: input.phone,
-    note: input.note,
-    status: 'pending',
-    ticket: null,
-    createdAt: Date.now(),
-    calledAt: null,
+  if (!(await openSlots(doctor.id, input.date)).includes(input.time)) throw new SlotTakenError()
+  const db = await getDb()
+  try {
+    const [row] = await db
+      .insert(bookings)
+      .values({ ...input, id: randomId(10, 'BT'), clinicId: doctor.clinicId })
+      .returning()
+    return row
+  } catch (err) {
+    // Someone else booked the same slot a moment earlier.
+    if (isUniqueViolation(err)) throw new SlotTakenError()
+    throw err
   }
-  s.bookings.push(booking)
-  return booking
 }
 
-export function setStatus(id: string, status: BookingStatus) {
-  const s = store()
-  const booking = s.bookings.find((b) => b.id === id)
-  if (!booking) throw new Error('Unknown booking')
-
-  if (status === 'approved' && booking.ticket === null) {
-    booking.ticket = nextTicket(s, booking.clinicId, booking.date)
+/** Gives an approved booking the next ticket number for its clinic and day. */
+async function assignTicket(booking: Booking) {
+  const db = await getDb()
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await db
+        .update(bookings)
+        .set({
+          ticket: sql`(select coalesce(max(${bookings.ticket}), 0) + 1 from ${bookings} where ${bookings.clinicId} = ${booking.clinicId} and ${bookings.date} = ${booking.date})`,
+        })
+        .where(and(eq(bookings.id, booking.id), sql`${bookings.ticket} is null`))
+      return
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err
+    }
   }
+  throw new Error('Could not assign a ticket number')
+}
+
+export async function setStatus(booking: Booking, status: BookingStatus) {
+  const db = await getDb()
+  if ((status === 'approved' || status === 'in_progress') && booking.ticket === null) await assignTicket(booking)
   if (status === 'in_progress') {
     // A doctor sees one patient at a time: whoever was with them is finished.
-    for (const b of s.bookings) {
-      if (b.doctorId === booking.doctorId && b.status === 'in_progress' && b.id !== id) b.status = 'done'
-    }
-    booking.calledAt = Date.now()
+    await db
+      .update(bookings)
+      .set({ status: 'done' })
+      .where(and(eq(bookings.doctorId, booking.doctorId), eq(bookings.status, 'in_progress'), ne(bookings.id, booking.id)))
   }
-  booking.status = status
-  return booking
+  await db
+    .update(bookings)
+    .set({ status, ...(status === 'in_progress' ? { calledAt: Date.now() } : {}) })
+    .where(eq(bookings.id, booking.id))
+}
+
+/** The patients currently with a doctor at a clinic today, most recently called first. */
+export async function nowServing(clinicId: string, date: string) {
+  const db = await getDb()
+  return db
+    .select()
+    .from(bookings)
+    .where(and(eq(bookings.clinicId, clinicId), eq(bookings.date, date), eq(bookings.status, 'in_progress')))
+    .orderBy(desc(bookings.calledAt))
 }

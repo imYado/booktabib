@@ -1,9 +1,13 @@
 import Link from 'next/link'
+import { logout } from '@/app/actions'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { getCurrentUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const { locale, t } = await getI18n()
+  const user = await getCurrentUser()
+  const role = user?.role
   return (
     <>
       <header className="site-header">
@@ -13,8 +17,21 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           </Link>
           <nav className="nav" aria-label="Main">
             <Link href="/clinics">{t.nav.clinics}</Link>
-            <Link href="/assistant">{t.nav.assistant}</Link>
-            <Link href="/doctor">{t.nav.doctor}</Link>
+            {(role === 'assistant' || role === 'admin') && <Link href="/assistant">{t.nav.assistant}</Link>}
+            {(role === 'doctor' || role === 'admin') && <Link href="/doctor">{t.nav.doctor}</Link>}
+            {role === 'admin' && <Link href="/admin">{t.nav.admin}</Link>}
+            {role === 'patient' && <Link href="/account">{t.nav.account}</Link>}
+            {user ? (
+              <form action={logout}>
+                <button type="submit" className="btn btn-secondary btn-sm">
+                  {t.nav.logout}
+                </button>
+              </form>
+            ) : (
+              <Link href="/login" className="btn btn-secondary btn-sm">
+                {t.nav.login}
+              </Link>
+            )}
             <LanguageSwitcher locale={locale} t={t} />
           </nav>
         </div>

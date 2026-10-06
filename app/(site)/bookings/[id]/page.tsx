@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
+import { canUpdateBooking, getCurrentUser } from '@/lib/auth'
 import { getClinic, getDoctor } from '@/lib/data'
 import { formatDay } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
@@ -15,7 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function BookingPage({ params }: Props) {
   const { locale, t } = await getI18n()
-  const booking = getBooking((await params).id)
+  const booking = await getBooking((await params).id)
+  const user = await getCurrentUser()
 
   if (!booking) {
     return (
@@ -68,9 +71,14 @@ export default async function BookingPage({ params }: Props) {
             </dd>
           </dl>
         </div>
-        <Link href="/" className="btn btn-secondary" style={{ marginTop: 32 }}>
-          {t.booking.backHome}
-        </Link>
+        <div className="row" style={{ marginTop: 32 }}>
+          {user?.id === booking.userId && canUpdateBooking(user, booking, 'cancelled') && (
+            <StatusButton id={booking.id} status="cancelled" label={t.account.cancel} size="md" />
+          )}
+          <Link href={user?.role === 'patient' ? '/account' : '/'} className="btn btn-secondary">
+            {user?.role === 'patient' ? t.nav.account : t.booking.backHome}
+          </Link>
+        </div>
       </div>
     </section>
   )

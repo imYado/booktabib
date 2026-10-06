@@ -6,6 +6,7 @@ import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
 import { clinics, getClinic, getDoctor } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
+import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { listBookings } from '@/lib/store'
 
@@ -16,11 +17,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ clinic?: string }> }) {
   const { locale, t } = await getI18n()
-  const clinic = getClinic((await searchParams).clinic ?? '') ?? clinics[0]
+  const user = await requireUser(['assistant', 'admin'], '/assistant')
+  // Assistants work for one clinic; administrators can look at any.
+  const clinic = (user.role === 'assistant' ? getClinic(user.clinicId ?? '') : getClinic((await searchParams).clinic ?? '')) ?? clinics[0]
   const today = todayISO()
 
-  const pending = listBookings({ clinicId: clinic.id, status: 'pending' }).filter((b) => b.date >= today)
-  const queue = listBookings({ clinicId: clinic.id, date: today }).filter((b) => b.status !== 'pending' && b.status !== 'cancelled')
+  const [pending, queue] = await Promise.all([
+    listBookings({ clinicId: clinic.id, status: 'pending', fromDate: today }),
+    listBookings({ clinicId: clinic.id, date: today, status: ['approved', 'in_progress', 'done'] }),
+  ])
   const serving = queue.filter((b) => b.status === 'in_progress')
 
   return (
@@ -39,13 +44,17 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
           </Link>
         </div>
 
-        <PickerForm
-          name="clinic"
-          label={t.assistant.clinic}
-          value={clinic.id}
-          options={clinics.map((c) => ({ value: c.id, label: c.name[locale] }))}
-          submit={t.common.show}
-        />
+        {user.role === 'admin' ? (
+          <PickerForm
+            name="clinic"
+            label={t.assistant.clinic}
+            value={clinic.id}
+            options={clinics.map((c) => ({ value: c.id, label: c.name[locale] }))}
+            submit={t.common.show}
+          />
+        ) : (
+          <p className="eyebrow">{clinic.name[locale]}</p>
+        )}
 
         {serving.length > 0 && (
           <div className="card card-paper" style={{ marginTop: 32 }}>

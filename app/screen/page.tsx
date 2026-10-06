@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { clinics, getClinic, getDoctor } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
+import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
-import { listBookings } from '@/lib/store'
+import { listBookings, nowServing } from '@/lib/store'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
@@ -12,16 +13,18 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ScreenPage({ searchParams }: { searchParams: Promise<{ clinic?: string }> }) {
   const { locale, t } = await getI18n()
-  const clinic = getClinic((await searchParams).clinic ?? '') ?? clinics[0]
+  // Patient names are shown, so the screen needs a staff login (the clinic TV stays signed in).
+  const user = await requireUser(['assistant', 'admin'], '/screen')
+  const clinic = (user.role === 'assistant' ? getClinic(user.clinicId ?? '') : getClinic((await searchParams).clinic ?? '')) ?? clinics[0]
   const today = todayISO()
 
-  const queue = listBookings({ clinicId: clinic.id, date: today })
-  const serving = queue
-    .filter((b) => b.status === 'in_progress')
-    .sort((a, b) => (b.calledAt ?? 0) - (a.calledAt ?? 0))
+  const [serving, waiting] = await Promise.all([
+    nowServing(clinic.id, today),
+    listBookings({ clinicId: clinic.id, date: today, status: 'approved' }),
+  ])
   const current = serving[0]
   const others = serving.slice(1)
-  const next = queue.filter((b) => b.status === 'approved').slice(0, 4)
+  const next = waiting.slice(0, 4)
   const doctor = current ? getDoctor(current.doctorId) : undefined
 
   return (
