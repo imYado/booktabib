@@ -39,6 +39,8 @@ export type Clinic = {
   city: CityId
   address: Localized
   phone: string
+  /** Map pin for directions. */
+  location: { lat: number; lng: number }
   rating: number
   reviews: number
   specialties: SpecialtyId[]
@@ -64,6 +66,7 @@ export const clinics: Clinic[] = [
     city: 'erbil',
     address: { en: '100m Street, Ankawa, Erbil', ar: 'شارع 100 متر، عنكاوا، أربيل', ckb: 'شەقامی ١٠٠ مەتری، عەنکاوە، هەولێر' },
     phone: '07730304703',
+    location: { lat: 36.238, lng: 43.993 },
     rating: 4.8,
     reviews: 214,
     specialties: ['general', 'pediatrics'],
@@ -79,6 +82,7 @@ export const clinics: Clinic[] = [
     city: 'sulaymaniyah',
     address: { en: 'Salim Street, Sulaymaniyah', ar: 'شارع سالم، السليمانية', ckb: 'شەقامی سالم، سلێمانی' },
     phone: '07730304703',
+    location: { lat: 35.56, lng: 45.433 },
     rating: 4.9,
     reviews: 341,
     specialties: ['dentistry'],
@@ -94,6 +98,7 @@ export const clinics: Clinic[] = [
     city: 'baghdad',
     address: { en: 'Al-Mansour, Baghdad', ar: 'المنصور، بغداد', ckb: 'مەنسوور، بەغدا' },
     phone: '07730304703',
+    location: { lat: 33.317, lng: 44.345 },
     rating: 4.7,
     reviews: 158,
     specialties: ['cardiology', 'general'],
@@ -109,6 +114,7 @@ export const clinics: Clinic[] = [
     city: 'erbil',
     address: { en: 'Gulan Street, Erbil', ar: 'شارع گولان، أربيل', ckb: 'شەقامی گوڵان، هەولێر' },
     phone: '07730304703',
+    location: { lat: 36.205, lng: 44.009 },
     rating: 4.6,
     reviews: 97,
     specialties: ['dermatology'],
@@ -124,6 +130,7 @@ export const clinics: Clinic[] = [
     city: 'duhok',
     address: { en: 'Kawa Street, Duhok', ar: 'شارع كاوا، دهوك', ckb: 'شەقامی کاوە، دهۆک' },
     phone: '07730304703',
+    location: { lat: 36.865, lng: 42.988 },
     rating: 4.8,
     reviews: 186,
     specialties: ['gynecology', 'pediatrics'],
@@ -139,6 +146,7 @@ export const clinics: Clinic[] = [
     city: 'sulaymaniyah',
     address: { en: 'Bakhtiari, Sulaymaniyah', ar: 'بختياري، السليمانية', ckb: 'بەختیاری، سلێمانی' },
     phone: '07730304703',
+    location: { lat: 35.57, lng: 45.405 },
     rating: 4.5,
     reviews: 73,
     specialties: ['ophthalmology', 'orthopedics'],
@@ -330,10 +338,21 @@ export function doctorsAt(clinicId: string) {
   return doctors.filter((d) => d.clinicId === clinicId)
 }
 
+/** Average length of a visit, used to estimate when a patient will be seen. */
+export const MINUTES_PER_PATIENT = 15
+
 /** Appointment times offered each working day. */
 export const dailySlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00']
 
 /** Clinics are closed on Fridays. */
 export function isWorkingDay(iso: string) {
   return new Date(`${iso}T12:00:00Z`).getUTCDay() !== 5
+}
+
+/** Turns a local Iraqi number (07xx...) or an international one into digits for wa.me links. */
+export function whatsappNumber(phone: string) {
+  let digits = phone.replace(/\D/g, '')
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  else if (digits.startsWith('0')) digits = `964${digits.slice(1)}`
+  return digits
 }

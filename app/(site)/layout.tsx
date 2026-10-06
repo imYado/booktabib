@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { logout } from '@/app/actions'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
@@ -13,6 +14,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <header className="site-header">
         <div className="container">
           <Link href="/" className="brand" lang="en">
+            <Image src="/logo.png" alt="" width={24} height={32} priority />
             {t.brand}
           </Link>
           <nav className="nav" aria-label="Main">

@@ -43,15 +43,16 @@ export async function requestBooking(formData: FormData) {
   }
 
   const user = await getCurrentUser()
-  let id: string
+  let booking: Awaited<ReturnType<typeof createBooking>>
   try {
-    id = (await createBooking({ doctorId, date, time, patientName, phone, note, userId: user?.id ?? null })).id
+    booking = await createBooking({ doctorId, date, time, patientName, phone, note, userId: user?.id ?? null })
   } catch (err) {
     if (err instanceof SlotTakenError) redirect(`${back}&error=taken`)
     throw err
   }
   revalidatePath('/', 'layout')
-  redirect(`/bookings/${id}`)
+  // Signed-in patients get the full booking page; everyone else gets their private live link.
+  redirect(user ? `/bookings/${booking.id}` : `/q/${booking.liveToken}`)
 }
 
 const allowedStatuses: BookingStatus[] = ['approved', 'cancelled', 'in_progress', 'done']

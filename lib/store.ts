@@ -139,3 +139,22 @@ export async function nowServing(clinicId: string, date: string) {
     .where(and(eq(bookings.clinicId, clinicId), eq(bookings.date, date), eq(bookings.status, 'in_progress')))
     .orderBy(desc(bookings.calledAt))
 }
+
+export async function getBookingByLiveToken(token: string): Promise<Booking | undefined> {
+  if (!/^[0-9a-f]{64}$/.test(token)) return undefined
+  const db = await getDb()
+  const [row] = await db.select().from(bookings).where(eq(bookings.liveToken, token)).limit(1)
+  return row
+}
+
+/** Where a booking stands in its doctor's line today. */
+export async function queuePosition(booking: Booking) {
+  const line = await listBookings({ doctorId: booking.doctorId, date: booking.date, status: ['approved', 'in_progress'] })
+  const serving = line.find((b) => b.status === 'in_progress') ?? null
+  const ahead = line.filter(
+    (b) =>
+      b.id !== booking.id &&
+      (b.status === 'in_progress' || b.time < booking.time || (b.time === booking.time && (b.ticket ?? 0) < (booking.ticket ?? 0))),
+  ).length
+  return { servingTicket: serving?.ticket ?? null, ahead }
+}

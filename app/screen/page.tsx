@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { clinics, getClinic, getDoctor } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
@@ -31,7 +32,10 @@ export default async function ScreenPage({ searchParams }: { searchParams: Promi
     <main className="screen">
       <AutoRefresh seconds={5} />
       <header className="screen-top">
-        <strong>{clinic.name[locale]}</strong>
+        <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6em' }}>
+          <Image src="/logo.png" alt="" width={30} height={40} style={{ height: '1.4em', width: 'auto' }} />
+          {clinic.name[locale]}
+        </strong>
         <span className="caption" style={{ fontSize: 'inherit' }}>
           {formatDay(locale, today, { weekday: 'long', month: 'long' })}
         </span>
