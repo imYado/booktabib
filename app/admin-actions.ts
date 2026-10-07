@@ -7,7 +7,7 @@ import { getDb } from '@/db'
 import { bookings, clinics, clinicSettings, doctors, doctorSettings, images, sessions, users } from '@/db/schema'
 import { getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { isCity, isSpecialty } from '@/lib/data'
+import { isCity, isHonorific, isSpecialty } from '@/lib/data'
 import { locales, type Localized } from '@/lib/i18n'
 import { randomId } from '@/lib/ids'
 import { hashPassword } from '@/lib/password'
@@ -29,12 +29,23 @@ function num(formData: FormData, key: string, min: number, max: number) {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min
 }
 
-/** A field written in every language (name_en, name_ar, name_ckb). Empty ones fall back to English. */
+/** A field written in each language (name_en, name_ar, name_ckb), stored as typed. The site fills empty languages from another. */
 function localized(formData: FormData, key: string, max = 200): Localized {
-  const en = text(formData, `${key}_en`, max)
-  const out = { en } as Localized
-  for (const l of locales) out[l] = text(formData, `${key}_${l}`, max) || en
+  const out = { en: '', ar: '', ckb: '' } as Localized
+  for (const l of locales) out[l] = text(formData, `${key}_${l}`, max)
   return out
+}
+
+/** Drops a "Dr." typed into the name itself, since the title is picked separately. */
+function withoutDr(name: Localized): Localized {
+  const out = { ...name }
+  for (const l of locales) out[l] = out[l].replace(/^(dr\.?|د\.)\s+/i, '')
+  return out
+}
+
+/** Whether at least one language was filled in. */
+function written(value: Localized) {
+  return locales.some((l) => value[l])
 }
 
 function slug(value: string) {
@@ -91,9 +102,11 @@ export async function createClinic(formData: FormData) {
   await requireAdmin()
   const name = localized(formData, 'name', 120)
   const city = text(formData, 'city')
-  if (!name.en || !isCity(city)) redirect('/admin/clinics?error=missing')
+  if (!written(name) || !isCity(city)) redirect('/admin/clinics?error=missing')
   const { getClinic } = await getCatalog()
-  let id = slug(name.en) || 'clinic'
+  // Ids come from the English name; names in other scripts get a random one.
+  const base = slug(name.en)
+  let id = base || `clinic-${randomId(6).toLowerCase()}`
   if (getClinic(id)) id = `${id}-${randomId(4).toLowerCase()}`
   const db = await getDb()
   const empty = { en: '', ar: '', ckb: '' }
@@ -110,7 +123,7 @@ export async function updateClinic(formData: FormData) {
   const back = `/admin/clinics/${clinic.id}`
   const name = localized(formData, 'name', 120)
   const city = text(formData, 'city')
-  if (!name.en || !isCity(city)) redirect(`${back}?error=missing`)
+  if (!written(name) || !isCity(city)) redirect(`${back}?error=missing`)
 
   const imageId = await photoChange(formData, clinic.imageId)
   if (imageId === 'invalid') redirect(`${back}?error=photo`)
@@ -166,16 +179,18 @@ export async function createDoctor(formData: FormData) {
   const clinic = getClinic(text(formData, 'clinicId'))
   if (!clinic) redirect('/admin/clinics')
   const back = `/admin/clinics/${clinic.id}`
-  const name = localized(formData, 'name', 120)
+  const name = withoutDr(localized(formData, 'name', 120))
   const specialty = text(formData, 'specialty')
-  if (!name.en || !isSpecialty(specialty)) redirect(`${back}?error=missing#doctors`)
-  const id = `${slug(name.en.replace(/^dr\.?\s+/i, '')) || 'doctor'}-${randomId(4).toLowerCase()}`
+  if (!written(name) || !isSpecialty(specialty)) redirect(`${back}?error=missing#doctors`)
+  const honorific = text(formData, 'honorific')
+  const id = `${slug(name.en) || 'doctor'}-${randomId(4).toLowerCase()}`
   const db = await getDb()
   const empty = { en: '', ar: '', ckb: '' }
   await db.insert(doctors).values({
     id,
     clinicId: clinic.id,
     name,
+    honorific: isHonorific(honorific) && honorific !== 'other' ? honorific : 'none',
     specialty,
     title: empty,
     bio: empty,
@@ -191,9 +206,11 @@ export async function updateDoctor(formData: FormData) {
   const doctor = getDoctor(text(formData, 'id'))
   if (!doctor) redirect('/admin/clinics')
   const back = `/admin/clinics/${doctor.clinicId}`
-  const name = localized(formData, 'name', 120)
+  const name = withoutDr(localized(formData, 'name', 120))
   const specialty = text(formData, 'specialty')
-  if (!name.en || !isSpecialty(specialty)) redirect(`${back}?error=missing#doctor-${doctor.id}`)
+  if (!written(name) || !isSpecialty(specialty)) redirect(`${back}?error=missing#doctor-${doctor.id}`)
+  const honorific = text(formData, 'honorific')
+  const honorificOther = localized(formData, 'honorificOther', 40)
 
   const imageId = await photoChange(formData, doctor.imageId)
   if (imageId === 'invalid') redirect(`${back}?error=photo#doctor-${doctor.id}`)
@@ -202,6 +219,9 @@ export async function updateDoctor(formData: FormData) {
     .update(doctors)
     .set({
       name,
+      // An empty "other" title means no title.
+      honorific: !isHonorific(honorific) || (honorific === 'other' && !written(honorificOther)) ? 'none' : honorific,
+      honorificOther: honorific === 'other' ? honorificOther : {},
       specialty,
       title: localized(formData, 'title', 200),
       bio: localized(formData, 'bio', 1500),

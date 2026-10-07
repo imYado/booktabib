@@ -8,13 +8,14 @@ import { AdminTabs, FormNotice, LocalizedField, PhotoField } from '@/components/
 import { Avatar } from '@/components/Avatar'
 import { AccentPicker, WhatsappField } from '@/components/ClinicSettings'
 import { ConfirmButton } from '@/components/ConfirmButton'
+import { HonorificPicker } from '@/components/HonorificPicker'
 import { Icon } from '@/components/Icon'
 import { getDb } from '@/db'
 import { users } from '@/db/schema'
 import { accentStyle } from '@/lib/accents'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { cities, specialties, type CityId, type SpecialtyId } from '@/lib/data'
+import { cities, specialties, specialtyIds, type CityId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
 import { staffOptions } from '../../staff-options'
@@ -30,7 +31,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${t.edit.edit} · ${getClinic((await params).id)?.name[locale] ?? ''}`, robots: { index: false } }
 }
 
-const specialtyIds = Object.keys(specialties) as SpecialtyId[]
 
 export default async function EditClinicPage({ params, searchParams }: Props) {
   const catalog = await getCatalog()
@@ -55,6 +55,7 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
   const options = staffOptions(catalog, locale)
   const labels = { name: t.auth.name, email: t.auth.email }
   const openDoctor = query.added ?? query.saved
+  const honorificLabels = { ...t.edit, langs: t.edit.langs }
   const stack = (gap: number) => ({ '--stack': `${gap}px` }) as React.CSSProperties
 
   return (
@@ -84,9 +85,9 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
           <form action={updateClinic} className="card stack" style={stack(24)}>
             <input type="hidden" name="id" value={clinic.id} />
             <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{t.edit.details}</h2>
-            <LocalizedField name="name" label={t.edit.name} value={clinic.name} t={t} required max={120} prefix="clinic" />
-            <LocalizedField name="address" label={t.edit.address} value={clinic.address} t={t} max={300} prefix="clinic" />
-            <LocalizedField name="about" label={t.edit.about} value={clinic.about} t={t} multiline max={1500} prefix="clinic" />
+            <LocalizedField name="name" label={t.edit.name} value={clinic.raw.name} t={t} required max={120} prefix="clinic" />
+            <LocalizedField name="address" label={t.edit.address} value={clinic.raw.address} t={t} max={300} prefix="clinic" />
+            <LocalizedField name="about" label={t.edit.about} value={clinic.raw.about} t={t} multiline max={1500} prefix="clinic" />
             <div className="form-grid">
               <div className="field">
                 <label htmlFor="clinic-city">{t.edit.city}</label>
@@ -174,9 +175,10 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
                     <div className="stack edit-panel" style={stack(24)}>
                       <form action={updateDoctor} className="stack" style={stack(24)}>
                         <input type="hidden" name="id" value={d.id} />
-                        <LocalizedField name="name" label={t.edit.name} value={d.name} t={t} required max={120} prefix={d.id} />
-                        <LocalizedField name="title" label={t.edit.title} value={d.title} t={t} prefix={d.id} />
-                        <LocalizedField name="bio" label={t.edit.bio} value={d.bio} t={t} multiline max={1500} prefix={d.id} />
+                        <HonorificPicker prefix={d.id} value={d.honorific} other={d.raw.honorificOther} locale={locale} t={honorificLabels} />
+                        <LocalizedField name="name" label={t.edit.name} value={d.raw.name} t={t} required max={120} prefix={d.id} />
+                        <LocalizedField name="title" label={t.edit.title} value={d.raw.title} t={t} prefix={d.id} />
+                        <LocalizedField name="bio" label={t.edit.bio} value={d.raw.bio} t={t} multiline max={1500} prefix={d.id} />
                         <div className="form-grid">
                           <div className="field">
                             <label htmlFor={`${d.id}-specialty`}>{t.edit.specialty}</label>
@@ -220,13 +222,10 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
             </ul>
             <form action={createDoctor} className="add-form" style={{ marginTop: 16 }}>
               <input type="hidden" name="clinicId" value={clinic.id} />
+              <h3 style={{ fontSize: '1.15rem', margin: 0 }}>{t.edit.addDoctor}</h3>
+              <LocalizedField name="name" label={t.edit.name} t={t} required max={120} prefix="new-doctor" />
               <div className="form-grid" style={{ alignItems: 'end' }}>
-                <div className="field">
-                  <label htmlFor="new-doctor-name">
-                    {t.edit.name} ({t.edit.langs.en})
-                  </label>
-                  <input id="new-doctor-name" name="name_en" className="input" required maxLength={120} dir="ltr" placeholder="Dr. …" />
-                </div>
+                <HonorificPicker prefix="new-doctor" value="dr" locale={locale} t={honorificLabels} allowOther={false} />
                 <div className="field">
                   <label htmlFor="new-doctor-specialty">{t.edit.specialty}</label>
                   <select id="new-doctor-specialty" name="specialty" className="select" defaultValue={clinic.specialties[0] ?? 'general'}>

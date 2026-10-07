@@ -3,7 +3,7 @@ import { ClinicCard } from '@/components/ClinicCard'
 import { Icon } from '@/components/Icon'
 import { SearchField } from '@/components/SearchField'
 import { getCatalog } from '@/lib/catalog'
-import { cities, specialties, type CityId, type SpecialtyId } from '@/lib/data'
+import { cities, specialties, specialtyIds, type CityId, type SpecialtyId } from '@/lib/data'
 import { locales } from '@/lib/i18n'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
@@ -68,7 +68,7 @@ export default async function ClinicsPage({ searchParams }: { searchParams: Prom
             style={{ flex: '0 1 220px', borderRadius: 999 }}
           >
             <option value="">{t.search.allSpecialties}</option>
-            {(Object.keys(specialties) as SpecialtyId[]).map((s) => (
+            {specialtyIds.map((s) => (
               <option key={s} value={s}>
                 {specialties[s][locale]}
               </option>
