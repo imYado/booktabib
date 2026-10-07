@@ -204,6 +204,8 @@ svg {
 /* Header and footer */
 
 .site-header {
+  line-height: 1.5;
+  letter-spacing: 0;
   border-bottom: 1px solid var(--rule);
   background: var(--white);
 }
@@ -213,14 +215,11 @@ svg {
   gap: 16px 24px;
   min-height: 72px;
   flex-wrap: wrap;
-  /* The header frame stays put when the page flips direction: logo left, language switcher right. */
+  /* The whole top bar keeps one layout in every language: logo left, then links, sign in/out and languages on the right. */
   direction: ltr;
 }
 .site-header .brand {
   margin-inline-end: auto;
-}
-:root[dir='rtl'] .nav {
-  direction: rtl;
 }
 /* On phones: logo and language switcher share the top row, links go underneath. */
 @media (max-width: 640px) {
@@ -256,6 +255,8 @@ svg {
   flex-wrap: wrap;
 }
 .nav a:not(.btn) {
+  min-width: 72px;
+  text-align: center;
   text-decoration: none;
   font-weight: 500;
   font-size: 0.95rem;
@@ -298,6 +299,18 @@ svg {
   color: var(--caption);
   cursor: pointer;
   transition: color var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+/* Each language name is always set in its own font, whatever language the page is in. */
+.lang-switch button[lang='en'] {
+  font-family: var(--font-hanken), 'Hanken Grotesk', Helvetica, Arial, sans-serif;
+}
+.lang-switch button[lang='ar'],
+.lang-switch button[lang='ckb'] {
+  font-family: var(--font-vazirmatn), Vazirmatn, Tahoma, Arial, sans-serif;
+}
+.lang-switch button {
+  letter-spacing: 0;
+  line-height: 1;
 }
 .lang-switch button:hover {
   color: var(--ink);
@@ -879,4 +892,8 @@ dl.details dd {
   gap: 6px;
   border-top: 1px solid var(--rule);
   padding-top: 20px;
+}
+
+.site-header .nav .btn {
+  min-width: 128px;
 }
