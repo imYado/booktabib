@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ClinicCard } from '@/components/ClinicCard'
 import { Icon } from '@/components/Icon'
+import { SearchField } from '@/components/SearchField'
 import { clinics, specialties, type SpecialtyId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 
@@ -12,16 +13,8 @@ export default async function HomePage() {
         <div className="container">
           <p className="eyebrow">{t.tagline}</p>
           <h1 style={{ maxWidth: '16ch' }}>{t.home.title}</h1>
-          <p className="lead">{t.home.lead}</p>
-          <form action="/clinics" className="search-bar" role="search" style={{ marginTop: 40, maxWidth: 720 }}>
-            <label htmlFor="q" className="visually-hidden">
-              {t.home.searchPlaceholder}
-            </label>
-            <input id="q" name="q" className="input" placeholder={t.home.searchPlaceholder} />
-            <button className="btn" type="submit">
-              <Icon name="search" />
-              {t.home.search}
-            </button>
+          <form action="/clinics" role="search" style={{ marginTop: 40, maxWidth: 720 }}>
+            <SearchField placeholder={t.home.searchPlaceholder} submitLabel={t.home.search} />
           </form>
         </div>
       </section>

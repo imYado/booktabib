@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ClinicCard } from '@/components/ClinicCard'
 import { Icon } from '@/components/Icon'
+import { SearchField } from '@/components/SearchField'
 import { cities, clinics, doctorsAt, specialties, type CityId, type SpecialtyId } from '@/lib/data'
 import { locales } from '@/lib/i18n'
 import { getI18n } from '@/lib/locale'
@@ -40,10 +41,7 @@ export default async function ClinicsPage({ searchParams }: { searchParams: Prom
       <div className="container">
         <h1 style={{ marginTop: 32 }}>{t.search.title}</h1>
         <form className="search-bar" role="search" style={{ margin: '24px 0 16px' }}>
-          <label htmlFor="q" className="visually-hidden">
-            {t.home.searchPlaceholder}
-          </label>
-          <input id="q" name="q" defaultValue={params.q ?? ''} className="input" placeholder={t.home.searchPlaceholder} />
+          <SearchField placeholder={t.home.searchPlaceholder} defaultValue={params.q ?? ''} submitLabel={t.home.search} />
           <label htmlFor="city" className="visually-hidden">
             {t.search.allCities}
           </label>
