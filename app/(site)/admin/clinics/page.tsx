@@ -30,11 +30,14 @@ export default async function AdminClinicsPage({ searchParams }: { searchParams:
         <div className="dash-grid" style={{ marginTop: 40 }}>
           <form action={createClinic} className="card stack" style={{ '--stack': '20px', alignSelf: 'start' } as React.CSSProperties}>
             <h2 style={{ fontSize: '1.5rem' }}>{t.edit.addClinic}</h2>
+            <p className="caption" style={{ margin: 0 }}>
+              {t.edit.oneLanguage}
+            </p>
             <div className="field">
               <label htmlFor="new-name">
                 {t.edit.name} ({t.edit.langs.en})
               </label>
-              <input id="new-name" name="name_en" className="input" required maxLength={120} dir="ltr" />
+              <input id="new-name" name="name_en" className="input" maxLength={120} dir="ltr" />
             </div>
             <div className="field">
               <label htmlFor="new-name-ar">

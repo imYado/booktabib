@@ -94,7 +94,10 @@ export const doctors = pgTable(
     clinicId: text('clinic_id')
       .notNull()
       .references(() => clinics.id, { onDelete: 'cascade' }),
+    // Without the title; it is added in front from `honorific` (lib/data.ts).
     name: jsonb('name').$type<Localized>().notNull(),
+    honorific: text('honorific').notNull().default('none'),
+    honorificOther: jsonb('honorific_other').$type<Partial<Localized>>().notNull().default({}),
     specialty: text('specialty').notNull(),
     title: jsonb('title').$type<Localized>().notNull(),
     years: integer('years').notNull().default(0),

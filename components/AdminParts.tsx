@@ -42,6 +42,11 @@ export function LocalizedField({
   return (
     <fieldset className="field-group">
       <legend className="field-legend">{label}</legend>
+      {required && (
+        <p className="caption" style={{ margin: '0 0 8px' }}>
+          {t.edit.oneLanguage}
+        </p>
+      )}
       <div className="lang-fields">
         {locales.map((l: Locale) => {
           const id = `${prefix}-${name}-${l}`
@@ -53,7 +58,6 @@ export function LocalizedField({
             maxLength: max,
             lang: l,
             dir: l === 'en' ? 'ltr' : 'rtl',
-            required: required && l === 'en',
           }
           return (
             <div key={l} className="field">

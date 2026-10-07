@@ -1,24 +1,31 @@
-import Link from 'next/link'
-import { ClinicCard } from '@/components/ClinicCard'
-import { Icon } from '@/components/Icon'
-import { SearchField } from '@/components/SearchField'
-import { getCatalog } from '@/lib/catalog'
-import { specialties, type SpecialtyId } from '@/lib/data'
-import { getI18n } from '@/lib/locale'
-import { getClinicAccents } from '@/lib/settings'
+import Link from "next/link";
+import { ClinicCard } from "@/components/ClinicCard";
+import { Icon } from "@/components/Icon";
+import { SearchField } from "@/components/SearchField";
+import { getCatalog } from "@/lib/catalog";
+import { specialties, specialtyIds } from "@/lib/data";
+import { getI18n } from "@/lib/locale";
+import { getClinicAccents } from "@/lib/settings";
 
 export default async function HomePage() {
-  const { clinics, doctors } = await getCatalog()
-  const { locale, t } = await getI18n()
-  const accentsById = await getClinicAccents()
+  const { clinics, doctors } = await getCatalog();
+  const { locale, t } = await getI18n();
+  const accentsById = await getClinicAccents();
   return (
     <>
       <section className="section">
         <div className="container">
           <p className="eyebrow">{t.tagline}</p>
-          <h1 style={{ maxWidth: '16ch' }}>{t.home.title}</h1>
-          <form action="/clinics" role="search" style={{ marginTop: 40, maxWidth: 720 }}>
-            <SearchField placeholder={t.home.searchPlaceholder} submitLabel={t.home.search} />
+          <h1 style={{ maxWidth: "16ch" }}>{t.home.title}</h1>
+          <form
+            action="/clinics"
+            role="search"
+            style={{ marginTop: 40, maxWidth: 720 }}
+          >
+            <SearchField
+              placeholder={t.home.searchPlaceholder}
+              submitLabel={t.home.search}
+            />
           </form>
         </div>
       </section>
@@ -34,7 +41,14 @@ export default async function HomePage() {
           </div>
           <div className="grid">
             {clinics.slice(0, 3).map((c) => (
-              <ClinicCard key={c.id} clinic={c} doctorCount={doctors.filter((d) => d.clinicId === c.id).length} accent={accentsById[c.id]} locale={locale} t={t} />
+              <ClinicCard
+                key={c.id}
+                clinic={c}
+                doctorCount={doctors.filter((d) => d.clinicId === c.id).length}
+                accent={accentsById[c.id]}
+                locale={locale}
+                t={t}
+              />
             ))}
           </div>
         </div>
@@ -44,11 +58,21 @@ export default async function HomePage() {
         <div className="container">
           <h2>{t.home.bySpecialty}</h2>
           <div className="choices" style={{ marginTop: 24 }}>
-            {(Object.keys(specialties) as SpecialtyId[]).map((s) => (
-              <Link key={s} href={`/clinics?specialty=${s}`} className="choice">
-                {specialties[s][locale]}
-              </Link>
-            ))}
+            {specialtyIds
+              .filter(
+                (s) =>
+                  clinics.some((c) => c.specialties.includes(s)) ||
+                  doctors.some((d) => d.specialty === s),
+              )
+              .map((s) => (
+                <Link
+                  key={s}
+                  href={`/clinics?specialty=${s}`}
+                  className="choice"
+                >
+                  {specialties[s][locale]}
+                </Link>
+              ))}
           </div>
         </div>
       </section>
@@ -64,7 +88,7 @@ export default async function HomePage() {
             {t.home.steps.map((s) => (
               <li key={s.title}>
                 <h3>{s.title}</h3>
-                <p className="caption" style={{ fontSize: '1rem' }}>
+                <p className="caption" style={{ fontSize: "1rem" }}>
                   {s.body}
                 </p>
               </li>
@@ -74,7 +98,10 @@ export default async function HomePage() {
       </section>
 
       <section className="section section-paper">
-        <div className="container split split-even" style={{ alignItems: 'center' }}>
+        <div
+          className="container split split-even"
+          style={{ alignItems: "center" }}
+        >
           <div>
             <h2>{t.home.clinicsTitle}</h2>
             <p className="lead">{t.home.clinicsBody}</p>
@@ -88,5 +115,5 @@ export default async function HomePage() {
         </div>
       </section>
     </>
-  )
+  );
 }
