@@ -1,5 +1,6 @@
 'use server'
 
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -87,6 +88,14 @@ export async function login(formData: FormData) {
   redirect(safeNext(next, landingFor(user.role)))
 }
 
+function setupCodeMatches(given: string) {
+  const expected = process.env.ADMIN_SETUP_CODE?.trim()
+  if (!expected || expected.length < 12) return false
+  const a = createHash('sha256').update(given.trim()).digest()
+  const b = createHash('sha256').update(expected).digest()
+  return timingSafeEqual(a, b)
+}
+
 export async function register(formData: FormData) {
   const name = text(formData, 'name', 80)
   const email = text(formData, 'email', 254).toLowerCase()
@@ -98,13 +107,18 @@ export async function register(formData: FormData) {
   if (!name || !phone || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(`/register?error=missing${q}`)
   if (password.length < 8 || password.length > 200) redirect(`/register?error=weak${q}`)
 
+  // The ADMIN_EMAIL address becomes the administrator only together with the secret ADMIN_SETUP_CODE.
+  // Without the code nobody can register that address, so it can't be claimed by someone else first.
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
+  const isAdmin = Boolean(adminEmail && email === adminEmail)
+  if (isAdmin && !setupCodeMatches(String(formData.get('setupCode') ?? ''))) {
+    redirect(`/register?error=reserved&setup=1${q}`)
+  }
+  const role = isAdmin ? 'admin' : 'patient'
+
   const db = await getDb()
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
   if (existing) redirect(`/register?error=exists${q}`)
-
-  // The person whose email is set as ADMIN_EMAIL becomes the administrator when they sign up.
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
-  const role = adminEmail && email === adminEmail ? 'admin' : 'patient'
   const id = randomId(16)
   await db.insert(users).values({ id, email, name, phone, role, passwordHash: await hashPassword(password) })
   await startSession(id)

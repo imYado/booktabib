@@ -8,12 +8,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.auth.registerTitle }
 }
 
-type Props = { searchParams: Promise<{ next?: string; error?: string }> }
+type Props = { searchParams: Promise<{ next?: string; error?: string; setup?: string }> }
 
 export default async function RegisterPage({ searchParams }: Props) {
   const { t } = await getI18n()
-  const { next = '', error } = await searchParams
-  const messages: Record<string, string> = { exists: t.auth.exists, weak: t.auth.weak, missing: t.auth.missing }
+  const { next = '', error, setup } = await searchParams
+  const messages: Record<string, string> = { exists: t.auth.exists, weak: t.auth.weak, missing: t.auth.missing, reserved: t.auth.reserved }
   const message = error ? messages[error] : null
 
   return (
@@ -48,6 +48,13 @@ export default async function RegisterPage({ searchParams }: Props) {
               dir="ltr"
             />
           </div>
+          {/* Only shown at /register?setup=1, for the person setting up the administrator account. */}
+          {setup === '1' && (
+            <div className="field">
+              <label htmlFor="setupCode">{t.auth.setupCode}</label>
+              <input id="setupCode" name="setupCode" type="password" className="input" required autoComplete="off" dir="ltr" />
+            </div>
+          )}
           {message && (
             <p className="notice" role="alert">
               {message}
