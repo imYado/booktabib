@@ -6,9 +6,11 @@ import { StatusButton } from '@/components/StatusButton'
 import { headers } from 'next/headers'
 import { SendLink } from '@/components/SendLink'
 import { StatusPill } from '@/components/StatusPill'
-import { clinics, getClinic, getDoctor, whatsappNumber } from '@/lib/data'
+import { ClinicSettings } from '@/components/ClinicSettings'
+import { clinics, doctorsAt, getClinic, getDoctor, whatsappNumber } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
-import { requireUser } from '@/lib/auth'
+import { canManageClinic, requireUser } from '@/lib/auth'
+import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
 import { getI18n } from '@/lib/locale'
 import { listBookings, type Booking } from '@/lib/store'
 
@@ -24,9 +26,14 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   const clinic = (user.role === 'assistant' ? getClinic(user.clinicId ?? '') : getClinic((await searchParams).clinic ?? '')) ?? clinics[0]
   const today = todayISO()
 
-  const [pending, queue] = await Promise.all([
-    listBookings({ clinicId: clinic.id, status: 'pending', fromDate: today }),
-    listBookings({ clinicId: clinic.id, date: today, status: ['approved', 'in_progress', 'done'] }),
+  // An assistant tied to one doctor only sees that doctor's patients.
+  const doctorId = user.role === 'assistant' ? (user.doctorId ?? undefined) : undefined
+  const myDoctors = doctorsAt(clinic.id).filter((d) => !doctorId || d.id === doctorId)
+  const [pending, queue, accent, whatsapps] = await Promise.all([
+    listBookings({ clinicId: clinic.id, doctorId, status: 'pending', fromDate: today }),
+    listBookings({ clinicId: clinic.id, doctorId, date: today, status: ['approved', 'in_progress', 'done'] }),
+    getClinicAccent(clinic.id),
+    getDoctorWhatsapps(myDoctors.map((d) => d.id)),
   ])
   const serving = queue.filter((b) => b.status === 'in_progress')
 
@@ -72,7 +79,10 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
             submit={t.common.show}
           />
         ) : (
-          <p className="eyebrow">{clinic.name[locale]}</p>
+          <p className="eyebrow">
+            {clinic.name[locale]}
+            {doctorId && ` · ${getDoctor(doctorId)?.name[locale]}`}
+          </p>
         )}
 
         {serving.length > 0 && (
@@ -149,6 +159,16 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
             )}
           </div>
         </div>
+
+        <ClinicSettings
+          clinic={clinic}
+          accent={accent}
+          doctors={myDoctors}
+          whatsapps={whatsapps}
+          canEditAccent={canManageClinic(user, clinic.id)}
+          locale={locale}
+          t={t}
+        />
       </div>
     </section>
   )

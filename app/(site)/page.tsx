@@ -4,9 +4,11 @@ import { Icon } from '@/components/Icon'
 import { SearchField } from '@/components/SearchField'
 import { clinics, specialties, type SpecialtyId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
+import { getClinicAccents } from '@/lib/settings'
 
 export default async function HomePage() {
   const { locale, t } = await getI18n()
+  const accentsById = await getClinicAccents()
   return (
     <>
       <section className="section">
@@ -30,7 +32,7 @@ export default async function HomePage() {
           </div>
           <div className="grid">
             {clinics.slice(0, 3).map((c) => (
-              <ClinicCard key={c.id} clinic={c} locale={locale} t={t} />
+              <ClinicCard key={c.id} clinic={c} accent={accentsById[c.id]} locale={locale} t={t} />
             ))}
           </div>
         </div>

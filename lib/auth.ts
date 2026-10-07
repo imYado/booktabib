@@ -81,7 +81,21 @@ export function canUpdateBooking(
 ) {
   if (user.role === 'admin') return true
   if (booking.userId === user.id && status === 'cancelled') return booking.status === 'pending' || booking.status === 'approved'
-  if (user.role === 'assistant') return user.clinicId === booking.clinicId
+  // An assistant works for a whole clinic, or for one doctor in it.
+  if (user.role === 'assistant') return user.clinicId === booking.clinicId && (!user.doctorId || user.doctorId === booking.doctorId)
   if (user.role === 'doctor') return user.doctorId === booking.doctorId && (status === 'in_progress' || status === 'done')
+  return false
+}
+
+/** Whether a user may change a clinic's page settings: admins, and assistants for the whole clinic. */
+export function canManageClinic(user: SessionUser, clinicId: string) {
+  return user.role === 'admin' || (user.role === 'assistant' && user.clinicId === clinicId && !user.doctorId)
+}
+
+/** Whether a user may change a doctor's contact settings: admins, the clinic's assistants, and the doctor. */
+export function canManageDoctor(user: SessionUser, doctor: { id: string; clinicId: string }) {
+  if (user.role === 'admin') return true
+  if (user.role === 'doctor') return user.doctorId === doctor.id
+  if (user.role === 'assistant') return user.clinicId === doctor.clinicId && (!user.doctorId || user.doctorId === doctor.id)
   return false
 }

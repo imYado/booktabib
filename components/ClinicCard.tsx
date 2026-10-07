@@ -1,12 +1,13 @@
 import Link from 'next/link'
+import { accentStyle, type AccentId } from '@/lib/accents'
 import { cities, doctorsAt, specialties, type Clinic } from '@/lib/data'
 import { formatNumber } from '@/lib/format'
 import type { Dictionary, Locale } from '@/lib/i18n'
 import { Icon } from './Icon'
 
-export function ClinicCard({ clinic, locale, t }: { clinic: Clinic; locale: Locale; t: Dictionary }) {
+export function ClinicCard({ clinic, accent, locale, t }: { clinic: Clinic; accent?: AccentId; locale: Locale; t: Dictionary }) {
   return (
-    <Link href={`/clinics/${clinic.id}`} className="card">
+    <Link href={`/clinics/${clinic.id}`} className="card" style={accentStyle(accent)}>
       <div className="placeholder">
         <Icon name="image" size={28} />
       </div>

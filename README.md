@@ -56,8 +56,8 @@ Vazirmatn) are self-hosted through `next/font`. The design tokens and components
 | `/q/[token]` | Anyone with the link | Patient's live line: name, number, people ahead, estimate, directions, WhatsApp. Nothing else |
 | `/login`, `/register` | Everyone | Patients sign up; staff accounts come from an administrator |
 | `/account` | Signed in | My bookings, with cancelling |
-| `/assistant` | Assistants, admins | Approve or cancel requests, call patients in |
-| `/doctor` | Doctors, admins | Today's patients, current patient, weekly chart |
+| `/assistant` | Assistants, admins | Approve or cancel requests, call patients in, pick the clinic's accent colour and doctors' WhatsApp numbers |
+| `/doctor` | Doctors, admins | Today's patients, current patient, weekly chart, own WhatsApp number |
 | `/screen` | Assistants, admins | Clinic TV showing who is being served, refreshes every 5 seconds |
 | `/admin` | Admins | Create staff accounts |
 
@@ -65,6 +65,9 @@ Vazirmatn) are self-hosted through `next/font`. The design tokens and components
 
 - **Bookings, accounts and sessions** are in Postgres (`db/schema.ts`), through Drizzle ORM.
   After changing the schema, run `npm run db:generate` and commit the new file in `db/migrations/`.
+- **Clinic accent colours and doctor WhatsApp numbers** are in `clinic_settings` and `doctor_settings`.
+  The colours are listed in `lib/accents.ts`. An assistant can work for a whole clinic or for one
+  doctor in it; a one-doctor assistant only sees that doctor's patients.
 - **Clinics and doctors** are still the fictional sample list in `lib/data.ts`. Replace it with real
   clinics when you have them.
 - Passwords are hashed with scrypt. Sessions are random tokens in an http-only cookie, stored hashed.

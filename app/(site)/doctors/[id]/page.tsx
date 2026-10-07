@@ -7,7 +7,9 @@ import { Icon } from '@/components/Icon'
 import { cities, getClinic, getDoctor, isWorkingDay, specialties } from '@/lib/data'
 import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
 import { getCurrentUser } from '@/lib/auth'
+import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
+import { getClinicAccent } from '@/lib/settings'
 import { openSlots } from '@/lib/store'
 
 type Props = {
@@ -37,13 +39,14 @@ export default async function DoctorPage({ params, searchParams }: Props) {
   const { day, error } = await searchParams
 
   const user = await getCurrentUser()
+  const accent = await getClinicAccent(clinic.id)
   const days = upcomingDays(7)
   const slotsByDay = await Promise.all(days.map((d) => openSlots(doctor.id, d)))
   const selected = day && days.includes(day) ? day : (days.find((_, i) => slotsByDay[i].length) ?? days[0])
   const slots = slotsByDay[days.indexOf(selected)]
 
   return (
-    <section className="section-tight">
+    <section className="section-tight" style={accentStyle(accent)}>
       <div className="container split" style={{ paddingTop: 32, paddingBottom: 72 }}>
         <div>
           <div className="row" style={{ gap: 20, marginBottom: 24 }}>
@@ -69,7 +72,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             <dd>
               {formatNumber(locale, doctor.fee)} {t.common.iqd}
             </dd>
-            <dt>{t.common.years}</dt>
+            <dt>{t.doctorProfile.experienceLabel}</dt>
             <dd>{t.doctorProfile.experience(doctor.years)}</dd>
           </dl>
         </div>

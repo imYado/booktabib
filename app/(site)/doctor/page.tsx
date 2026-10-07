@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Avatar } from '@/components/Avatar'
+import { WhatsappField } from '@/components/ClinicSettings'
 import { PickerForm } from '@/components/PickerForm'
 import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
@@ -8,6 +9,7 @@ import { doctors, getClinic, getDoctor } from '@/lib/data'
 import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
+import { getDoctorWhatsapps } from '@/lib/settings'
 import { listBookings } from '@/lib/store'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -23,7 +25,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const clinic = getClinic(doctor.clinicId)!
   const today = todayISO()
 
-  const mine = await listBookings({ doctorId: doctor.id, fromDate: today })
+  const [mine, whatsapps] = await Promise.all([listBookings({ doctorId: doctor.id, fromDate: today }), getDoctorWhatsapps([doctor.id])])
   const todays = mine.filter((b) => b.date === today && b.status !== 'pending' && b.status !== 'cancelled')
   const waiting = todays.filter((b) => b.status === 'approved')
   const seen = todays.filter((b) => b.status === 'done')
@@ -135,6 +137,13 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
               <p className="caption">{t.doctorDash.noSchedule}</p>
             )}
           </div>
+        </div>
+
+        <div className="card stack" style={{ '--stack': '12px', marginTop: 56 } as React.CSSProperties}>
+          <p className="caption" style={{ margin: 0 }}>
+            {t.settings.whatsappHint.replace('{phone}', clinic.phone)}
+          </p>
+          <WhatsappField doctor={doctor} value={whatsapps[doctor.id] ?? ''} label={t.settings.myWhatsapp} t={t} />
         </div>
       </div>
     </section>

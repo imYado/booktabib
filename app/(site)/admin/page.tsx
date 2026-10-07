@@ -33,7 +33,12 @@ export default async function AdminPage() {
             t={t.admin}
             labels={{ name: t.auth.name, email: t.auth.email, missing: t.auth.missing, exists: t.auth.exists }}
             clinics={clinics.map((c) => ({ value: c.id, label: c.name[locale] }))}
-            doctors={doctors.map((d) => ({ value: d.id, label: `${d.name[locale]} · ${getClinic(d.clinicId)?.name[locale]}` }))}
+            doctors={doctors.map((d) => ({
+              value: d.id,
+              label: `${d.name[locale]} · ${getClinic(d.clinicId)?.name[locale]}`,
+              shortLabel: d.name[locale],
+              clinicId: d.clinicId,
+            }))}
           />
           <div>
             <h2 style={{ fontSize: '1.5rem' }}>{t.admin.accounts}</h2>
@@ -44,8 +49,8 @@ export default async function AdminPage() {
                     <div style={{ fontWeight: 500 }}>{u.name}</div>
                     <div className="meta">
                       <span dir="ltr">{u.email}</span>
+                      {u.clinicId && <span>{getClinic(u.clinicId)?.name[locale]}</span>}
                       {u.doctorId && <span>{getDoctor(u.doctorId)?.name[locale]}</span>}
-                      {!u.doctorId && u.clinicId && <span>{getClinic(u.clinicId)?.name[locale]}</span>}
                     </div>
                   </div>
                   <span className="pill">{t.admin.roles[u.role]}</span>

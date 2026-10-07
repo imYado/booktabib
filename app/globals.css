@@ -897,3 +897,30 @@ dl.details dd {
 .site-header .nav .btn {
   min-width: 128px;
 }
+
+/* Clinic settings */
+
+.field-legend {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgb(27 26 23 / 0.12);
+  margin-inline-end: 8px;
+  flex: none;
+}
+.wa-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-items: center;
+}
+@media (min-width: 640px) {
+  .wa-row {
+    grid-template-columns: minmax(160px, 1fr) minmax(180px, 240px) auto;
+    gap: 16px;
+  }
+}

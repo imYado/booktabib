@@ -4,7 +4,9 @@ import { AutoRefresh } from '@/components/AutoRefresh'
 import { clinics, getClinic, getDoctor } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
+import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
+import { getClinicAccent } from '@/lib/settings'
 import { listBookings, nowServing } from '@/lib/store'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,9 +21,10 @@ export default async function ScreenPage({ searchParams }: { searchParams: Promi
   const clinic = (user.role === 'assistant' ? getClinic(user.clinicId ?? '') : getClinic((await searchParams).clinic ?? '')) ?? clinics[0]
   const today = todayISO()
 
-  const [serving, waiting] = await Promise.all([
+  const [serving, waiting, accent] = await Promise.all([
     nowServing(clinic.id, today),
     listBookings({ clinicId: clinic.id, date: today, status: 'approved' }),
+    getClinicAccent(clinic.id),
   ])
   const current = serving[0]
   const others = serving.slice(1)
@@ -29,7 +32,7 @@ export default async function ScreenPage({ searchParams }: { searchParams: Promi
   const doctor = current ? getDoctor(current.doctorId) : undefined
 
   return (
-    <main className="screen">
+    <main className="screen" style={accentStyle(accent)}>
       <AutoRefresh seconds={5} />
       <header className="screen-top">
         <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6em' }}>
