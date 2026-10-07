@@ -924,3 +924,100 @@ dl.details dd {
     gap: 16px;
   }
 }
+
+/* Assistant desk: reorderable line, edit and add forms */
+
+.list-title {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--caption);
+  margin: 0 0 8px;
+}
+.sortable-item {
+  grid-template-columns: auto auto 1fr;
+  background: var(--white);
+  transition: transform var(--speed) var(--ease);
+}
+/* Name and details get the full width; the buttons sit underneath them. */
+.queue-item.sortable-item .actions {
+  grid-column: 3 / -1;
+  margin-top: 8px;
+}
+.sortable-item .edit-form {
+  grid-column: 1 / -1;
+}
+.sortable-item.dragging {
+  position: relative;
+  z-index: 2;
+  transition: none;
+  border-radius: var(--radius);
+  outline: 1px solid var(--rule);
+}
+.sortable-item.dragging.settling {
+  transition: transform 0.18s var(--ease);
+}
+.sortable.is-dragging {
+  user-select: none;
+}
+.drag-handle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  margin-inline-start: -8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--caption);
+  cursor: grab;
+  touch-action: none;
+  transition: background-color var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.drag-handle:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+.dragging .drag-handle {
+  cursor: grabbing;
+  color: var(--ink);
+}
+.queue-item.is-removed .ticket,
+.queue-item.is-removed > div:nth-child(2) {
+  opacity: 0.5;
+}
+.edit-form {
+  display: none;
+  grid-column: 1 / -1;
+  gap: 12px;
+  align-items: end;
+  margin-top: 12px;
+}
+.edit-toggle:checked + .edit-form {
+  display: grid;
+}
+@media (min-width: 640px) {
+  .edit-form {
+    grid-template-columns: 1fr 1fr auto;
+  }
+}
+.add-patient {
+  margin-top: 12px;
+}
+.add-patient summary {
+  list-style: none;
+}
+.add-patient summary::-webkit-details-marker {
+  display: none;
+}
+.add-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+.sortable.is-still .sortable-item {
+  transition: none;
+}

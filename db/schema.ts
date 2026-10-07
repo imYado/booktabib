@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { bigint, date, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { bigint, boolean, date, doublePrecision, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const roleEnum = pgEnum('role', ['patient', 'assistant', 'doctor', 'admin'])
 export const bookingStatusEnum = pgEnum('booking_status', ['pending', 'approved', 'cancelled', 'in_progress', 'done'])
@@ -46,6 +46,11 @@ export const bookings = pgTable(
     ticket: integer('ticket'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     calledAt: bigint('called_at', { mode: 'number' }),
+    // Added at the desk rather than booked into a slot, so it doesn't hold the slot.
+    walkIn: boolean('walk_in').notNull().default(false),
+    // Place in the day's line after an assistant reorders it, in minutes since midnight like the
+    // slot time. Empty means the booking's own time.
+    position: doublePrecision('position'),
     // Secret for the patient's live queue link (/q/<token>). 256 random bits, so it cannot be guessed.
     liveToken: text('live_token')
       .notNull()
@@ -53,10 +58,10 @@ export const bookings = pgTable(
       .default(sql`replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '')`),
   },
   (t) => [
-    // One active booking per doctor per slot; cancelled ones free the slot.
+    // One active booking per doctor per slot; cancelled ones and walk-ins don't hold a slot.
     uniqueIndex('bookings_slot_unique')
       .on(t.doctorId, t.date, t.time)
-      .where(sql`${t.status} <> 'cancelled'`),
+      .where(sql`${t.status} <> 'cancelled' and not ${t.walkIn}`),
     uniqueIndex('bookings_ticket_unique').on(t.clinicId, t.date, t.ticket),
     index('bookings_clinic_date_idx').on(t.clinicId, t.date),
     index('bookings_doctor_date_idx').on(t.doctorId, t.date),

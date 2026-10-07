@@ -5,7 +5,8 @@ import { PickerForm } from '@/components/PickerForm'
 import { StatusButton } from '@/components/StatusButton'
 import { headers } from 'next/headers'
 import { SendLink } from '@/components/SendLink'
-import { StatusPill } from '@/components/StatusPill'
+import { SortableQueue } from '@/components/SortableQueue'
+import { AddPatientForm, EditToggle, PatientEditor, PatientRow } from '@/components/DeskParts'
 import { ClinicSettings } from '@/components/ClinicSettings'
 import { clinics, doctorsAt, getClinic, getDoctor, whatsappNumber } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
@@ -31,11 +32,14 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   const myDoctors = doctorsAt(clinic.id).filter((d) => !doctorId || d.id === doctorId)
   const [pending, queue, accent, whatsapps] = await Promise.all([
     listBookings({ clinicId: clinic.id, doctorId, status: 'pending', fromDate: today }),
-    listBookings({ clinicId: clinic.id, doctorId, date: today, status: ['approved', 'in_progress', 'done'] }),
+    listBookings({ clinicId: clinic.id, doctorId, date: today, status: ['approved', 'in_progress', 'done', 'cancelled'] }),
     getClinicAccent(clinic.id),
     getDoctorWhatsapps(myDoctors.map((d) => d.id)),
   ])
   const serving = queue.filter((b) => b.status === 'in_progress')
+  const waiting = queue.filter((b) => b.status === 'approved')
+  const seen = queue.filter((b) => b.status === 'in_progress' || b.status === 'done')
+  const removed = queue.filter((b) => b.status === 'cancelled')
 
   const h = await headers()
   const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}`
@@ -100,31 +104,68 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
         )}
 
         <div className="dash-grid" style={{ marginTop: 56 }}>
-          <div>
-            <h2 style={{ fontSize: '1.5rem' }}>{t.assistant.today}</h2>
-            {queue.length ? (
-              <ul className="list">
-                {queue.map((b) => (
-                  <li key={b.id} className="queue-item">
-                    <span className="ticket">{b.ticket}</span>
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{b.patientName}</div>
-                      <div className="meta">
-                        <span dir="ltr">{b.time}</span>
-                        <span>{getDoctor(b.doctorId)?.name[locale]}</span>
-                        <StatusPill status={b.status} t={t} />
-                      </div>
-                    </div>
-                    <div className="actions row">
-                      {b.status === 'approved' && <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />}
-                      {b.status === 'in_progress' && <StatusButton id={b.id} status="done" label={t.assistant.done} primary />}
-                      {b.status !== 'done' && linkButtons(b)}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="caption">{t.assistant.noToday}</p>
+          <div className="stack" style={{ '--stack': '32px' } as React.CSSProperties}>
+            <div>
+              <h2 style={{ fontSize: '1.5rem' }}>{t.assistant.today}</h2>
+              <AddPatientForm doctors={myDoctors} locale={locale} t={t} />
+            </div>
+
+            <div>
+              <h3 className="list-title">{t.assistant.waiting}</h3>
+              {waiting.length ? (
+                <>
+                  <p className="caption" style={{ marginTop: 0 }}>
+                    {t.assistant.dragHint}
+                  </p>
+                  <SortableQueue
+                    handleLabel={t.assistant.moveHandle}
+                    items={waiting.map((b) => ({
+                      id: b.id,
+                      content: (
+                        <PatientRow b={b} locale={locale} t={t}>
+                          <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />
+                          {linkButtons(b)}
+                          <EditToggle id={b.id} label={t.assistant.edit} />
+                          <StatusButton id={b.id} status="cancelled" label={t.assistant.remove} />
+                        </PatientRow>
+                      ),
+                    }))}
+                  />
+                </>
+              ) : (
+                <p className="caption">{t.assistant.noToday}</p>
+              )}
+            </div>
+
+            {seen.length > 0 && (
+              <div>
+                <h3 className="list-title">{t.assistant.withDoctor}</h3>
+                <ul className="list">
+                  {seen.map((b) => (
+                    <li key={b.id} className="queue-item">
+                      <PatientRow b={b} locale={locale} t={t}>
+                        {b.status === 'in_progress' && <StatusButton id={b.id} status="done" label={t.assistant.done} primary />}
+                        {b.status === 'in_progress' && linkButtons(b)}
+                      </PatientRow>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {removed.length > 0 && (
+              <div>
+                <h3 className="list-title">{t.assistant.removed}</h3>
+                <ul className="list">
+                  {removed.map((b) => (
+                    <li key={b.id} className="queue-item is-removed">
+                      <PatientRow b={b} locale={locale} t={t}>
+                        <StatusButton id={b.id} status="approved" label={t.assistant.addBack} />
+                      </PatientRow>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -150,7 +191,9 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                       <StatusButton id={b.id} status="approved" label={t.assistant.approve} primary />
                       <StatusButton id={b.id} status="cancelled" label={t.assistant.cancel} />
                       {linkButtons(b)}
+                      <EditToggle id={b.id} label={t.assistant.edit} />
                     </div>
+                    <PatientEditor b={b} t={t} />
                   </li>
                 ))}
               </ul>
