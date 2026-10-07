@@ -3,7 +3,8 @@ import Image from 'next/image'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
-import { getClinic, getDoctor, MINUTES_PER_PATIENT, whatsappNumber } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
+import { MINUTES_PER_PATIENT, whatsappNumber } from '@/lib/data'
 import { CLINIC_TIME_ZONE, formatDay, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
@@ -39,6 +40,7 @@ function toHHMM(minutes: number) {
 }
 
 export default async function LiveQueuePage({ params }: { params: Promise<{ token: string }> }) {
+  const { getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const booking = await getBookingByLiveToken((await params).token)
 

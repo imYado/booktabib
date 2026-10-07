@@ -5,7 +5,7 @@ import { PickerForm } from '@/components/PickerForm'
 import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
 import { WeekChart } from '@/components/WeekChart'
-import { doctors, getClinic, getDoctor } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
 import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
@@ -18,6 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DoctorDashboard({ searchParams }: { searchParams: Promise<{ doctor?: string }> }) {
+  const { doctors, getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await requireUser(['doctor', 'admin'], '/doctor')
   // Doctors see their own day; administrators can look at any doctor.
@@ -49,7 +50,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
       <div className="container" style={{ paddingTop: 32, paddingBottom: 72 }}>
         <div className="row between" style={{ alignItems: 'end', marginBottom: 32 }}>
           <div className="row" style={{ gap: 20 }}>
-            <Avatar size={64} />
+            <Avatar size={64} imageId={doctor.imageId} />
             <div>
               <p className="eyebrow" style={{ margin: 0 }}>
                 {t.doctorDash.title} · {formatDay(locale, today, { weekday: 'long', month: 'long' })}

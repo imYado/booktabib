@@ -408,9 +408,18 @@ a.card:hover {
   border-radius: var(--radius);
   aspect-ratio: 16 / 9;
   margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.placeholder img,
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar {
+  overflow: hidden;
   display: grid;
   place-items: center;
   width: 56px;
@@ -922,5 +931,269 @@ dl.details dd {
   .wa-row {
     grid-template-columns: minmax(160px, 1fr) minmax(180px, 240px) auto;
     gap: 16px;
+  }
+}
+
+/* Assistant desk: reorderable line, edit and add forms */
+
+.list-title {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--caption);
+  margin: 0 0 8px;
+}
+.sortable-item {
+  grid-template-columns: auto auto 1fr;
+  background: var(--white);
+  transition: transform var(--speed) var(--ease);
+}
+/* Name and details get the full width; the buttons sit underneath them. */
+.queue-item.sortable-item .actions {
+  grid-column: 3 / -1;
+  margin-top: 8px;
+}
+.sortable-item .edit-form {
+  grid-column: 1 / -1;
+}
+.sortable-item.dragging {
+  position: relative;
+  z-index: 2;
+  transition: none;
+  border-radius: var(--radius);
+  outline: 1px solid var(--rule);
+}
+.sortable-item.dragging.settling {
+  transition: transform 0.18s var(--ease);
+}
+.sortable.is-dragging {
+  user-select: none;
+}
+.drag-handle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  margin-inline-start: -8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--caption);
+  cursor: grab;
+  touch-action: none;
+  transition: background-color var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.drag-handle:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+.dragging .drag-handle {
+  cursor: grabbing;
+  color: var(--ink);
+}
+.queue-item.is-removed .ticket,
+.queue-item.is-removed > div:nth-child(2) {
+  opacity: 0.5;
+}
+.edit-form {
+  display: none;
+  grid-column: 1 / -1;
+  gap: 12px;
+  align-items: end;
+  margin-top: 12px;
+}
+.edit-toggle:checked + .edit-form {
+  display: grid;
+}
+@media (min-width: 640px) {
+  .edit-form {
+    grid-template-columns: 1fr 1fr auto;
+  }
+}
+.add-patient {
+  margin-top: 12px;
+}
+.add-patient summary {
+  list-style: none;
+}
+.add-patient summary::-webkit-details-marker {
+  display: none;
+}
+.add-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+.sortable.is-still .sortable-item {
+  transition: none;
+}
+
+/* Admin edit mode */
+
+.admin-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 32px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+}
+.admin-tabs a {
+  padding: 6px 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  color: var(--caption);
+  transition: background-color var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.admin-tabs a:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+.admin-tabs a[aria-current='page'] {
+  background: var(--ink);
+  color: var(--white);
+}
+.field-group {
+  /* No margin-top here, so a parent .stack can space it. */
+  margin-inline: 0;
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.field-group > .field-legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+.lang-fields {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 900px) {
+  .lang-fields {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.lang-fields .caption {
+  font-size: 0.8rem;
+}
+.photo-field {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.photo-preview {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 96px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--caption);
+}
+.photo-preview.is-round {
+  width: 72px;
+  border-radius: 999px;
+}
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.file-input {
+  font: inherit;
+  font-size: 0.9rem;
+  max-width: 100%;
+}
+.file-input::file-selector-button {
+  margin-inline-end: 12px;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--speed) var(--ease);
+}
+.file-input::file-selector-button:hover {
+  background: var(--paper);
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ink);
+}
+.saved-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--caption);
+  animation: fade-out 4s var(--ease) forwards;
+}
+@keyframes fade-out {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.btn-danger {
+  background: var(--white);
+  border-color: var(--rule);
+  color: #a3271f;
+}
+.btn-danger:hover {
+  opacity: 1;
+  background: #f2e3e3;
+  border-color: #e6cfcf;
+}
+.editor > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.editor > summary::-webkit-details-marker {
+  display: none;
+}
+.editor[open] > summary .btn-secondary {
+  background: var(--paper);
+}
+.edit-panel {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+.form-grid {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+.danger-zone {
+  border-color: #e6cfcf;
+}
+@media (prefers-reduced-motion: reduce) {
+  .saved-note {
+    animation: none;
   }
 }

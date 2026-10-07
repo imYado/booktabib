@@ -2,7 +2,8 @@ import 'server-only'
 import { and, asc, desc, eq, gte, inArray, ne, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { bookings, type Booking, type BookingStatus } from '@/db/schema'
-import { dailySlots, getDoctor, isWorkingDay } from './data'
+import { getCatalog } from './catalog'
+import { dailySlots, isWorkingDay } from './data'
 import { CLINIC_TIME_ZONE, todayISO } from './format'
 import { randomId } from './ids'
 
@@ -41,8 +42,20 @@ export async function listBookings(filter: Filter = {}): Promise<Booking[]> {
     .select()
     .from(bookings)
     .where(and(...where))
-    .orderBy(asc(bookings.date), asc(bookings.time))
+    .orderBy(asc(bookings.date), asc(queueKeySql), asc(bookings.time), asc(bookings.ticket))
 }
+
+function minutes(hhmm: string) {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+
+/** Where a booking sits in its day's line: where an assistant dragged it, else its own time. */
+export function queueKey(b: Pick<Booking, 'position' | 'time'>) {
+  return b.position ?? minutes(b.time)
+}
+
+const queueKeySql = sql`coalesce(${bookings.position}, split_part(${bookings.time}, ':', 1)::int * 60 + split_part(${bookings.time}, ':', 2)::int)`
 
 export async function getBooking(id: string): Promise<Booking | undefined> {
   const db = await getDb()
@@ -78,7 +91,7 @@ export async function createBooking(input: {
   note: string
   userId: string | null
 }): Promise<Booking> {
-  const doctor = getDoctor(input.doctorId)
+  const doctor = (await getCatalog()).getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
   if (!(await openSlots(doctor.id, input.date)).includes(input.time)) throw new SlotTakenError()
   const db = await getDb()
@@ -116,6 +129,15 @@ async function assignTicket(booking: Booking) {
 
 export async function setStatus(booking: Booking, status: BookingStatus) {
   const db = await getDb()
+  if (booking.status === 'cancelled' && status !== 'cancelled' && !booking.walkIn) {
+    // Bringing a removed patient back: if someone else has their slot by now, they come back as a walk-in.
+    try {
+      await db.update(bookings).set({ status: 'pending' }).where(eq(bookings.id, booking.id))
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err
+      await db.update(bookings).set({ walkIn: true }).where(eq(bookings.id, booking.id))
+    }
+  }
   if ((status === 'approved' || status === 'in_progress') && booking.ticket === null) await assignTicket(booking)
   if (status === 'in_progress') {
     // A doctor sees one patient at a time: whoever was with them is finished.
@@ -151,10 +173,45 @@ export async function getBookingByLiveToken(token: string): Promise<Booking | un
 export async function queuePosition(booking: Booking) {
   const line = await listBookings({ doctorId: booking.doctorId, date: booking.date, status: ['approved', 'in_progress'] })
   const serving = line.find((b) => b.status === 'in_progress') ?? null
-  const ahead = line.filter(
-    (b) =>
-      b.id !== booking.id &&
-      (b.status === 'in_progress' || b.time < booking.time || (b.time === booking.time && (b.ticket ?? 0) < (booking.ticket ?? 0))),
-  ).length
+  const waiting = line.filter((b) => b.status === 'approved')
+  const ahead = (serving && serving.id !== booking.id ? 1 : 0) + Math.max(0, waiting.findIndex((b) => b.id === booking.id))
   return { servingTicket: serving?.ticket ?? null, ahead }
+}
+
+/** Puts these waiting bookings in the given order, reusing the places they already had in the line. */
+export async function reorderQueue(ordered: Booking[]) {
+  const keys = ordered.map(queueKey).sort((a, b) => a - b)
+  const db = await getDb()
+  for (const [i, b] of ordered.entries()) {
+    if (queueKey(b) !== keys[i] || b.position === null) await db.update(bookings).set({ position: keys[i] }).where(eq(bookings.id, b.id))
+  }
+  // Equal keys would tie; spread them out a little so the order sticks.
+  for (let i = 1; i < keys.length; i++) {
+    if (keys[i] <= keys[i - 1]) {
+      keys[i] = keys[i - 1] + 0.001
+      await db.update(bookings).set({ position: keys[i] }).where(eq(bookings.id, ordered[i].id))
+    }
+  }
+}
+
+/** A patient added at the desk: approved straight away, at the end of today's line for their doctor. */
+export async function addWalkIn(input: { doctorId: string; patientName: string; phone: string; note: string }) {
+  const doctor = (await getCatalog()).getDoctor(input.doctorId)
+  if (!doctor) throw new Error('Unknown doctor')
+  const date = todayISO()
+  const time = nowHHMM()
+  const line = await listBookings({ doctorId: doctor.id, date, status: ['approved', 'in_progress'] })
+  const position = Math.max(minutes(time), ...line.map(queueKey)) + 1
+  const db = await getDb()
+  const [row] = await db
+    .insert(bookings)
+    .values({ ...input, id: randomId(10, 'BT'), clinicId: doctor.clinicId, date, time, walkIn: true, position, userId: null })
+    .returning()
+  await setStatus(row, 'approved')
+  return row
+}
+
+export async function updateContact(booking: Booking, patientName: string, phone: string) {
+  const db = await getDb()
+  await db.update(bookings).set({ patientName, phone }).where(eq(bookings.id, booking.id))
 }

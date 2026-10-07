@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { AutoRefresh } from '@/components/AutoRefresh'
-import { clinics, getClinic, getDoctor } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
 import { formatDay, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
 import { accentStyle } from '@/lib/accents'
@@ -15,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ScreenPage({ searchParams }: { searchParams: Promise<{ clinic?: string }> }) {
+  const { clinics, getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   // Patient names are shown, so the screen needs a staff login (the clinic TV stays signed in).
   const user = await requireUser(['assistant', 'admin'], '/screen')

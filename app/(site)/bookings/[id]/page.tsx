@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
 import { canUpdateBooking, getCurrentUser } from '@/lib/auth'
-import { getClinic, getDoctor } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
 import { formatDay } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { getBooking } from '@/lib/store'
@@ -16,6 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BookingPage({ params }: Props) {
+  const { getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await getCurrentUser()
   const found = await getBooking((await params).id)

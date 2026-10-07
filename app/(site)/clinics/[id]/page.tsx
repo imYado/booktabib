@@ -1,28 +1,33 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Avatar } from '@/components/Avatar'
+import { Avatar, ClinicPhoto } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
-import { cities, doctorsAt, getClinic, specialties } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
+import { cities, specialties } from '@/lib/data'
 import { formatNumber } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccent } from '@/lib/settings'
+import { getCurrentUser } from '@/lib/auth'
 
 type Props = { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { getClinic } = await getCatalog()
   const { locale } = await getI18n()
   const clinic = getClinic((await params).id)
   return { title: clinic?.name[locale] }
 }
 
 export default async function ClinicPage({ params }: Props) {
+  const { doctorsAt, getClinic } = await getCatalog()
   const { locale, t } = await getI18n()
   const clinic = getClinic((await params).id)
   if (!clinic) notFound()
   const team = doctorsAt(clinic.id)
   const accent = await getClinicAccent(clinic.id)
+  const user = await getCurrentUser()
 
   return (
     <div style={accentStyle(accent)}>
@@ -31,6 +36,12 @@ export default async function ClinicPage({ params }: Props) {
           <div>
             <p className="eyebrow">{clinic.specialties.map((s) => specialties[s][locale]).join(' · ')}</p>
             <h1>{clinic.name[locale]}</h1>
+            {user?.role === 'admin' && (
+              <Link href={`/admin/clinics/${clinic.id}`} className="btn btn-secondary btn-sm" style={{ marginBottom: 16 }}>
+                <Icon name="edit" size={16} />
+                {t.edit.editPage}
+              </Link>
+            )}
             <p className="lead">{clinic.about[locale]}</p>
             <div className="meta" style={{ fontSize: '1rem' }}>
               <span>
@@ -43,9 +54,7 @@ export default async function ClinicPage({ params }: Props) {
               </span>
             </div>
           </div>
-          <div className="placeholder" style={{ aspectRatio: '4 / 3', margin: 0 }}>
-            <Icon name="image" size={36} />
-          </div>
+          <ClinicPhoto imageId={clinic.imageId} style={{ aspectRatio: '4 / 3', margin: 0 }} />
         </div>
       </section>
 
@@ -57,7 +66,7 @@ export default async function ClinicPage({ params }: Props) {
               {team.map((d) => (
                 <li key={d.id} className="row between">
                   <div className="row" style={{ gap: 16 }}>
-                    <Avatar />
+                    <Avatar imageId={d.imageId} />
                     <div>
                       <h3 style={{ margin: 0 }}>{d.name[locale]}</h3>
                       <div className="meta">
