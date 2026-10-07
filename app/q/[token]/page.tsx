@@ -43,7 +43,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
   const header = (
     <header className="live-top">
       <Image src="/logo.png" alt="booktabib" width={30} height={40} priority />
-      <LanguageSwitcher locale={locale} t={t} />
+      <LanguageSwitcher locale={locale} label={t.common.switchTo} />
     </header>
   )
 

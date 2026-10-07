@@ -34,8 +34,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
                 {t.nav.login}
               </Link>
             )}
-            <LanguageSwitcher locale={locale} t={t} />
           </nav>
+          <LanguageSwitcher locale={locale} label={t.common.switchTo} />
         </div>
       </header>
       <main>{children}</main>

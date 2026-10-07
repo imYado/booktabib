@@ -98,6 +98,19 @@ svg {
   outline-offset: 3px;
 }
 
+:root {
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --speed: 0.25s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+  }
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -191,16 +204,39 @@ svg {
 /* Header and footer */
 
 .site-header {
+  line-height: 1.5;
+  letter-spacing: 0;
   border-bottom: 1px solid var(--rule);
   background: var(--white);
 }
 .site-header .container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 16px 24px;
   min-height: 72px;
   flex-wrap: wrap;
+  /* The whole top bar keeps one layout in every language: logo left, then links, sign in/out and languages on the right. */
+  direction: ltr;
+}
+.site-header .brand {
+  margin-inline-end: auto;
+}
+/* On phones: logo and language switcher share the top row, links go underneath. */
+@media (max-width: 640px) {
+  .site-header .container {
+    padding-block: 12px;
+    column-gap: 12px;
+  }
+  .lang-switch {
+    --lang-w: 54px;
+  }
+  .lang-switch button {
+    font-size: 0.8rem;
+  }
+  .site-header .nav {
+    order: 3;
+    flex-basis: 100%;
+  }
 }
 .brand {
   display: inline-flex;
@@ -218,36 +254,75 @@ svg {
   gap: 4px 20px;
   flex-wrap: wrap;
 }
-.nav a {
+.nav a:not(.btn) {
+  min-width: 72px;
+  text-align: center;
   text-decoration: none;
   font-weight: 500;
   font-size: 0.95rem;
+  transition: opacity var(--speed) var(--ease);
 }
-.nav a:hover {
-  text-decoration: underline;
+.nav a:not(.btn):hover {
+  opacity: 0.6;
 }
 
 .lang-switch {
-  display: flex;
-  gap: 4px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count), var(--lang-w, 64px));
   margin: 0;
+  padding: 3px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--white);
+  flex: none;
+}
+.lang-thumb {
+  position: absolute;
+  inset-block: 3px;
+  inset-inline-start: 3px;
+  width: calc((100% - 6px) / var(--count));
+  border-radius: 999px;
+  background: var(--ink);
+  transform: translateX(calc(var(--index) * 100%));
+  transition: transform 0.35s var(--ease);
 }
 .lang-switch button {
+  position: relative;
+  min-height: 28px;
+  padding: 0;
   font: inherit;
   font-size: 0.85rem;
-  border: 1px solid transparent;
+  border: 0;
+  border-radius: 999px;
   background: transparent;
   color: var(--caption);
-  padding: 4px 10px;
-  border-radius: 999px;
   cursor: pointer;
+  transition: color var(--speed) var(--ease), background-color var(--speed) var(--ease);
 }
-.lang-switch button[aria-pressed='true'] {
-  border-color: var(--ink);
-  color: var(--ink);
+/* Each language name is always set in its own font, whatever language the page is in. */
+.lang-switch button[lang='en'] {
+  font-family: var(--font-hanken), 'Hanken Grotesk', Helvetica, Arial, sans-serif;
+}
+.lang-switch button[lang='ar'],
+.lang-switch button[lang='ckb'] {
+  font-family: var(--font-vazirmatn), Vazirmatn, Tahoma, Arial, sans-serif;
+}
+.lang-switch button {
+  letter-spacing: 0;
+  line-height: 1;
 }
 .lang-switch button:hover {
   color: var(--ink);
+  background: var(--paper);
+}
+.lang-switch button[aria-pressed='true'] {
+  color: var(--white);
+  background: transparent;
+  cursor: default;
+}
+.lang-switch button:focus-visible {
+  outline-offset: 1px;
 }
 
 .site-footer {
@@ -274,14 +349,19 @@ svg {
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.15s ease, background-color 0.15s ease;
+  transition:
+    opacity var(--speed) var(--ease),
+    background-color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
   white-space: nowrap;
 }
 .btn:hover {
-  opacity: 0.85;
+  opacity: 0.8;
 }
+/* Light outline, paper fill on hover: the same as the language switcher. */
 .btn-secondary {
-  background: transparent;
+  background: var(--white);
+  border-color: var(--rule);
   color: var(--ink);
 }
 .btn-secondary:hover {
@@ -307,6 +387,7 @@ svg {
   padding: 24px;
   text-decoration: none;
   color: inherit;
+  transition: border-color var(--speed) var(--ease);
 }
 .card-paper {
   background: var(--paper);
@@ -365,7 +446,7 @@ a.card:hover {
   border-radius: var(--radius);
   padding: 12px 16px;
   min-height: 48px;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--speed) var(--ease);
 }
 .input::placeholder,
 .textarea::placeholder {
@@ -379,10 +460,12 @@ a.card:hover {
 }
 .input:focus,
 .select:focus,
-.textarea:focus {
+.textarea:focus,
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
   outline: none;
   border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
 }
 .textarea {
   min-height: 96px;
@@ -416,6 +499,7 @@ fieldset {
   padding-inline: 24px 56px;
   -webkit-appearance: none;
   appearance: none;
+  transition: background-color var(--speed) var(--ease);
 }
 .search-input::placeholder {
   color: #a8a39a;
@@ -423,12 +507,9 @@ fieldset {
 .search-input::-webkit-search-cancel-button {
   -webkit-appearance: none;
 }
-.search-input:focus {
-  outline: none;
-}
+.search-input:focus,
 .search-input:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
+  outline: none;
 }
 .search-submit {
   position: absolute;
@@ -443,8 +524,11 @@ fieldset {
   color: var(--white);
   cursor: pointer;
 }
+.search-submit {
+  transition: opacity var(--speed) var(--ease);
+}
 .search-submit:hover {
-  opacity: 0.75;
+  opacity: 0.6;
 }
 .search-submit:focus-visible {
   outline: 2px solid var(--white);
@@ -469,6 +553,10 @@ fieldset {
   font-size: 0.95rem;
   cursor: pointer;
   background: var(--white);
+  transition:
+    border-color var(--speed) var(--ease),
+    background-color var(--speed) var(--ease),
+    color var(--speed) var(--ease);
 }
 .choice:hover {
   border-color: var(--ink);
@@ -755,6 +843,7 @@ dl.details dd {
   padding: 20px var(--gutter) 56px;
 }
 .live-top {
+  direction: ltr;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -803,4 +892,8 @@ dl.details dd {
   gap: 6px;
   border-top: 1px solid var(--rule);
   padding-top: 20px;
+}
+
+.site-header .nav .btn {
+  min-width: 128px;
 }
