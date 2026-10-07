@@ -29,10 +29,12 @@ Locally no database setup is needed: without `DATABASE_URL` the app uses an embe
 2. In the Vercel project, open **Storage**, add **Neon Postgres** and connect it to the project.
    This sets `DATABASE_URL`.
 3. In **Settings → Environment Variables**, add `ADMIN_EMAIL` with the email you will use as
-   administrator.
+   administrator, and `ADMIN_SETUP_CODE` with a long random secret (at least 12 characters) that
+   only you know.
 4. Redeploy. Every deploy runs the database migrations first (`vercel-build` script).
-5. Open the site, choose **Log in → Create an account** with your `ADMIN_EMAIL`, and you land on
-   the **Staff** page, where you create accounts for clinic assistants and doctors.
+5. Open `/register?setup=1` on the site, sign up with your `ADMIN_EMAIL` and the setup code, and you
+   land on the **Staff** page, where you create accounts for clinic assistants and doctors.
+   Nobody can register `ADMIN_EMAIL` without the code, and a wrong code gives no account.
 
 A production database starts empty. To fill a preview database with the demo accounts and
 bookings, run `DATABASE_URL=... npm run db:seed-demo` once.
