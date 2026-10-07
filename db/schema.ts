@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
-import { bigint, boolean, date, doublePrecision, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import type { Localized } from '../lib/i18n'
+import { bigint, boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, real, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const roleEnum = pgEnum('role', ['patient', 'assistant', 'doctor', 'admin'])
 export const bookingStatusEnum = pgEnum('booking_status', ['pending', 'approved', 'cancelled', 'in_progress', 'done'])
@@ -68,6 +69,51 @@ export const bookings = pgTable(
     index('bookings_user_idx').on(t.userId),
   ],
 )
+
+// Clinics and their doctors, which administrators manage in edit mode.
+export const clinics = pgTable('clinics', {
+  id: text('id').primaryKey(),
+  name: jsonb('name').$type<Localized>().notNull(),
+  city: text('city').notNull(),
+  address: jsonb('address').$type<Localized>().notNull(),
+  phone: text('phone').notNull().default(''),
+  lat: doublePrecision('lat').notNull().default(0),
+  lng: doublePrecision('lng').notNull().default(0),
+  rating: real('rating').notNull().default(0),
+  reviews: integer('reviews').notNull().default(0),
+  specialties: jsonb('specialties').$type<string[]>().notNull().default([]),
+  about: jsonb('about').$type<Localized>().notNull(),
+  imageId: text('image_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const doctors = pgTable(
+  'doctors',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id, { onDelete: 'cascade' }),
+    name: jsonb('name').$type<Localized>().notNull(),
+    specialty: text('specialty').notNull(),
+    title: jsonb('title').$type<Localized>().notNull(),
+    years: integer('years').notNull().default(0),
+    fee: integer('fee').notNull().default(0),
+    room: text('room').notNull().default(''),
+    bio: jsonb('bio').$type<Localized>().notNull(),
+    imageId: text('image_id'),
+    sort: integer('sort').notNull().default(0),
+  },
+  (t) => [index('doctors_clinic_idx').on(t.clinicId)],
+)
+
+// Uploaded clinic and doctor photos, kept in the database so no extra storage service is needed.
+export const images = pgTable('images', {
+  id: text('id').primaryKey(),
+  contentType: text('content_type').notNull(),
+  data: text('data').notNull(), // base64
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 // Settings clinic staff can change themselves. Clinics and doctors are ids from lib/data.ts.
 export const clinicSettings = pgTable('clinic_settings', {

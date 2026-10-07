@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { StatusPill } from '@/components/StatusPill'
 import { requireUser } from '@/lib/auth'
-import { getClinic, getDoctor } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
 import { formatDay, todayISO } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { listBookings, type Booking } from '@/lib/store'
@@ -13,6 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AccountPage() {
+  const { getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await requireUser(['patient', 'assistant', 'doctor', 'admin'], '/account')
   const today = todayISO()

@@ -9,7 +9,7 @@ import { getDb } from '@/db'
 import { users, type BookingStatus } from '@/db/schema'
 import { isAccent } from '@/lib/accents'
 import { canManageClinic, canManageDoctor, canUpdateBooking, endSession, getCurrentUser, startSession } from '@/lib/auth'
-import { getClinic, getDoctor } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
 import { isLocale, LOCALE_COOKIE } from '@/lib/i18n'
 import { todayISO } from '@/lib/format'
 import { randomId } from '@/lib/ids'
@@ -33,6 +33,7 @@ function safeNext(value: string, fallback: string) {
 }
 
 export async function requestBooking(formData: FormData) {
+  const { getDoctor } = await getCatalog()
   const doctorId = text(formData, 'doctorId')
   const date = text(formData, 'date')
   const time = text(formData, 'time')
@@ -136,6 +137,7 @@ export async function logout() {
 export type CreateStaffState = { ok: true; email: string; password: string } | { ok: false; error: 'missing' | 'exists' | 'clinic' } | null
 
 export async function createStaff(_prev: CreateStaffState, formData: FormData): Promise<CreateStaffState> {
+  const { getClinic, getDoctor } = await getCatalog()
   const admin = await getCurrentUser()
   if (admin?.role !== 'admin') redirect('/login?denied=1')
 
@@ -176,6 +178,7 @@ export async function createStaff(_prev: CreateStaffState, formData: FormData): 
 }
 
 export async function updateClinicAccent(formData: FormData) {
+  const { getClinic } = await getCatalog()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const clinicId = text(formData, 'clinicId')
@@ -186,6 +189,7 @@ export async function updateClinicAccent(formData: FormData) {
 }
 
 export async function updateDoctorWhatsapp(formData: FormData) {
+  const { getDoctor } = await getCatalog()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const doctor = getDoctor(text(formData, 'doctorId'))
@@ -198,6 +202,7 @@ export async function updateDoctorWhatsapp(formData: FormData) {
 
 /** Staff who run a clinic's desk for this doctor: admins and the clinic's assistants. */
 async function deskUserFor(doctorId: string) {
+  const { getDoctor } = await getCatalog()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const doctor = getDoctor(doctorId)

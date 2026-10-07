@@ -4,8 +4,9 @@ import { useActionState, useState } from 'react'
 import { createStaff, type CreateStaffState } from '@/app/actions'
 import type { Dictionary } from '@/lib/i18n'
 
-type Option = { value: string; label: string }
-type DoctorOption = Option & { shortLabel: string; clinicId: string }
+export type Option = { value: string; label: string }
+export type DoctorOption = Option & { shortLabel: string; clinicId: string }
+export type StaffValues = { name: string; email: string; role: string; clinicId: string | null; doctorId: string | null }
 
 export function CreateStaffForm({
   t,
@@ -45,32 +46,39 @@ export function CreateStaffForm({
   )
 }
 
-function Fields({
+/** Name, email, role and workplace of a staff account. `prefix` keeps field ids unique when several are on a page. */
+export function Fields({
   t,
   labels,
   clinics,
   doctors,
+  prefix = 'staff',
+  initial,
+  lockRole = false,
 }: {
   t: Dictionary['admin']
   labels: { name: string; email: string }
   clinics: Option[]
   doctors: DoctorOption[]
+  prefix?: string
+  initial?: StaffValues
+  lockRole?: boolean
 }) {
-  const [role, setRole] = useState('assistant')
-  const [clinicId, setClinicId] = useState(clinics[0]?.value ?? '')
+  const [role, setRole] = useState(initial?.role ?? 'assistant')
+  const [clinicId, setClinicId] = useState(initial?.clinicId ?? clinics[0]?.value ?? '')
   return (
     <>
       <div className="field">
-        <label htmlFor="staff-name">{labels.name}</label>
-        <input id="staff-name" name="name" className="input" required maxLength={80} />
+        <label htmlFor={`${prefix}-name`}>{labels.name}</label>
+        <input id={`${prefix}-name`} name="name" className="input" required maxLength={80} defaultValue={initial?.name} />
       </div>
       <div className="field">
-        <label htmlFor="staff-email">{labels.email}</label>
-        <input id="staff-email" name="email" type="email" className="input" required dir="ltr" />
+        <label htmlFor={`${prefix}-email`}>{labels.email}</label>
+        <input id={`${prefix}-email`} name="email" type="email" className="input" required dir="ltr" defaultValue={initial?.email} />
       </div>
       <div className="field">
-        <label htmlFor="staff-role">{t.role}</label>
-        <select id="staff-role" name="role" className="select" value={role} onChange={(e) => setRole(e.target.value)}>
+        <label htmlFor={`${prefix}-role`}>{t.role}</label>
+        <select id={`${prefix}-role`} name="role" className="select" value={role} onChange={(e) => setRole(e.target.value)} disabled={lockRole}>
           <option value="assistant">{t.roles.assistant}</option>
           <option value="doctor">{t.roles.doctor}</option>
           <option value="admin">{t.roles.admin}</option>
@@ -78,9 +86,9 @@ function Fields({
       </div>
       {role === 'assistant' && (
         <div className="field">
-          <label htmlFor="staff-clinic">{t.clinic}</label>
+          <label htmlFor={`${prefix}-clinic`}>{t.clinic}</label>
           <select
-            id="staff-clinic"
+            id={`${prefix}-clinic`}
             name="clinicId"
             className="select"
             required
@@ -97,8 +105,14 @@ function Fields({
       )}
       {role === 'assistant' && (
         <div className="field">
-          <label htmlFor="staff-for">{t.assistantFor}</label>
-          <select id="staff-for" name="doctorId" className="select" defaultValue="" key={clinicId}>
+          <label htmlFor={`${prefix}-for`}>{t.assistantFor}</label>
+          <select
+            id={`${prefix}-for`}
+            name="doctorId"
+            className="select"
+            defaultValue={initial?.role === 'assistant' && initial.clinicId === clinicId ? (initial.doctorId ?? '') : ''}
+            key={clinicId}
+          >
             <option value="">{t.wholeClinic}</option>
             {doctors
               .filter((d) => d.clinicId === clinicId)
@@ -112,8 +126,8 @@ function Fields({
       )}
       {role === 'doctor' && (
         <div className="field">
-          <label htmlFor="staff-doctor">{t.doctor}</label>
-          <select id="staff-doctor" name="doctorId" className="select" required>
+          <label htmlFor={`${prefix}-doctor`}>{t.doctor}</label>
+          <select id={`${prefix}-doctor`} name="doctorId" className="select" required defaultValue={initial?.doctorId ?? undefined}>
             {doctors.map((d) => (
               <option key={d.value} value={d.value}>
                 {d.label}

@@ -3,7 +3,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { clinicSettings, doctorSettings } from '@/db/schema'
 import { isAccent, type AccentId } from './accents'
-import { getClinic, getDoctor } from './data'
+import { getCatalog } from './catalog'
 
 export async function getClinicAccent(clinicId: string): Promise<AccentId> {
   const db = await getDb()
@@ -44,5 +44,6 @@ export async function setDoctorWhatsapp(doctorId: string, whatsapp: string) {
 /** The number a patient's live link sends WhatsApp messages to: the doctor's own, else the clinic's. */
 export async function contactNumberFor(doctorId: string): Promise<string | null> {
   const own = (await getDoctorWhatsapps([doctorId]))[doctorId]
+  const { getClinic, getDoctor } = await getCatalog()
   return own || (getClinic(getDoctor(doctorId)?.clinicId ?? '')?.phone ?? null)
 }

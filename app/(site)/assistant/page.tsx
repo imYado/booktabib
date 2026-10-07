@@ -8,7 +8,8 @@ import { SendLink } from '@/components/SendLink'
 import { SortableQueue } from '@/components/SortableQueue'
 import { AddPatientForm, EditToggle, PatientEditor, PatientRow } from '@/components/DeskParts'
 import { ClinicSettings } from '@/components/ClinicSettings'
-import { clinics, doctorsAt, getClinic, getDoctor, whatsappNumber } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
+import { whatsappNumber } from '@/lib/data'
 import { formatDay, todayISO } from '@/lib/format'
 import { canManageClinic, requireUser } from '@/lib/auth'
 import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
@@ -21,6 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ clinic?: string }> }) {
+  const { clinics, doctorsAt, getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await requireUser(['assistant', 'admin'], '/assistant')
   // Assistants work for one clinic; administrators can look at any.
@@ -122,7 +124,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                     items={waiting.map((b) => ({
                       id: b.id,
                       content: (
-                        <PatientRow b={b} locale={locale} t={t}>
+                        <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} t={t}>
                           <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />
                           {linkButtons(b)}
                           <EditToggle id={b.id} label={t.assistant.edit} />
@@ -143,7 +145,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                 <ul className="list">
                   {seen.map((b) => (
                     <li key={b.id} className="queue-item">
-                      <PatientRow b={b} locale={locale} t={t}>
+                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} t={t}>
                         {b.status === 'in_progress' && <StatusButton id={b.id} status="done" label={t.assistant.done} primary />}
                         {b.status === 'in_progress' && linkButtons(b)}
                       </PatientRow>
@@ -159,7 +161,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                 <ul className="list">
                   {removed.map((b) => (
                     <li key={b.id} className="queue-item is-removed">
-                      <PatientRow b={b} locale={locale} t={t}>
+                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} t={t}>
                         <StatusButton id={b.id} status="approved" label={t.assistant.addBack} />
                       </PatientRow>
                     </li>

@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation'
 import { requestBooking } from '@/app/actions'
 import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
-import { cities, getClinic, getDoctor, isWorkingDay, specialties } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
+import { cities, isWorkingDay, specialties } from '@/lib/data'
 import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
 import { getCurrentUser } from '@/lib/auth'
 import { accentStyle } from '@/lib/accents'
@@ -18,6 +19,7 @@ type Props = {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { getDoctor } = await getCatalog()
   const { locale } = await getI18n()
   return { title: getDoctor((await params).id)?.name[locale] }
 }
@@ -32,6 +34,7 @@ function upcomingDays(count: number) {
 }
 
 export default async function DoctorPage({ params, searchParams }: Props) {
+  const { getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const doctor = getDoctor((await params).id)
   if (!doctor) notFound()
@@ -50,7 +53,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
       <div className="container split" style={{ paddingTop: 32, paddingBottom: 72 }}>
         <div>
           <div className="row" style={{ gap: 20, marginBottom: 24 }}>
-            <Avatar size={72} />
+            <Avatar size={72} imageId={doctor.imageId} />
             <div>
               <p className="eyebrow" style={{ margin: 0 }}>
                 {specialties[doctor.specialty][locale]}
@@ -59,6 +62,12 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             </div>
           </div>
           <p className="lead">{doctor.title[locale]}</p>
+          {user?.role === 'admin' && (
+            <Link href={`/admin/clinics/${clinic.id}#doctor-${doctor.id}`} className="btn btn-secondary btn-sm">
+              <Icon name="edit" size={16} />
+              {t.edit.editPage}
+            </Link>
+          )}
           <hr className="rule" style={{ margin: '32px 0' }} />
           <h2 style={{ fontSize: '1.4rem' }}>{t.doctorProfile.about}</h2>
           <p>{doctor.bio[locale]}</p>

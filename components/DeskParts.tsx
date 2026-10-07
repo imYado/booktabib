@@ -1,13 +1,23 @@
 import type { ReactNode } from 'react'
 import { addPatient, editPatient } from '@/app/actions'
-import { getDoctor, type Doctor } from '@/lib/data'
+import type { Doctor } from '@/lib/data'
 import type { Dictionary, Locale } from '@/lib/i18n'
 import type { Booking } from '@/lib/store'
 import { Icon } from './Icon'
 import { StatusPill } from './StatusPill'
 
 /** One patient in the desk's lists: number, name, details, then actions and the hidden edit form. */
-export function PatientRow({ b, locale, t, children }: { b: Booking; locale: Locale; t: Dictionary; children?: ReactNode }) {
+export function PatientRow({
+  b,
+  doctorName,
+  t,
+  children,
+}: {
+  b: Booking
+  doctorName?: string
+  t: Dictionary
+  children?: ReactNode
+}) {
   return (
     <>
       <span className="ticket">{b.ticket}</span>
@@ -16,7 +26,7 @@ export function PatientRow({ b, locale, t, children }: { b: Booking; locale: Loc
         <div className="meta">
           <span dir="ltr">{b.time}</span>
           {b.walkIn && <span>{t.assistant.walkIn}</span>}
-          <span>{getDoctor(b.doctorId)?.name[locale]}</span>
+          {doctorName && <span>{doctorName}</span>}
           {b.phone && <span dir="ltr">{b.phone}</span>}
           <StatusPill status={b.status} t={t} />
         </div>

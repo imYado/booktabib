@@ -1,9 +1,10 @@
-import { clinics, dailySlots, doctors, isWorkingDay } from '../lib/data'
+import { asc } from 'drizzle-orm'
+import { dailySlots, isWorkingDay } from '../lib/data'
 import { addDays, todayISO } from '../lib/format'
 import { randomId } from '../lib/ids'
 import { hashPassword } from '../lib/password'
 import type { DB } from './index'
-import { bookings, users, type BookingStatus } from './schema'
+import { bookings, clinics as clinicsTable, doctors as doctorsTable, users, type BookingStatus } from './schema'
 
 export const DEMO_PASSWORD = 'booktabib-demo'
 
@@ -21,6 +22,11 @@ const samplePatients = [
 export async function seedDemo(db: DB) {
   const existing = await db.select({ id: users.id }).from(users).limit(1)
   if (existing.length) return
+
+  // The sample clinics and doctors come from the migrations.
+  const clinics = await db.select().from(clinicsTable).orderBy(asc(clinicsTable.createdAt), asc(clinicsTable.id))
+  const doctors = await db.select().from(doctorsTable).orderBy(asc(doctorsTable.sort))
+  if (!clinics.length || !doctors.length) return
 
   const passwordHash = await hashPassword(DEMO_PASSWORD)
   const demoUsers = [

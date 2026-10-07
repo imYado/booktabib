@@ -2,7 +2,8 @@ import 'server-only'
 import { and, asc, desc, eq, gte, inArray, ne, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { bookings, type Booking, type BookingStatus } from '@/db/schema'
-import { dailySlots, getDoctor, isWorkingDay } from './data'
+import { getCatalog } from './catalog'
+import { dailySlots, isWorkingDay } from './data'
 import { CLINIC_TIME_ZONE, todayISO } from './format'
 import { randomId } from './ids'
 
@@ -90,7 +91,7 @@ export async function createBooking(input: {
   note: string
   userId: string | null
 }): Promise<Booking> {
-  const doctor = getDoctor(input.doctorId)
+  const doctor = (await getCatalog()).getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
   if (!(await openSlots(doctor.id, input.date)).includes(input.time)) throw new SlotTakenError()
   const db = await getDb()
@@ -195,7 +196,7 @@ export async function reorderQueue(ordered: Booking[]) {
 
 /** A patient added at the desk: approved straight away, at the end of today's line for their doctor. */
 export async function addWalkIn(input: { doctorId: string; patientName: string; phone: string; note: string }) {
-  const doctor = getDoctor(input.doctorId)
+  const doctor = (await getCatalog()).getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
   const date = todayISO()
   const time = nowHHMM()

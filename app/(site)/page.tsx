@@ -2,11 +2,13 @@ import Link from 'next/link'
 import { ClinicCard } from '@/components/ClinicCard'
 import { Icon } from '@/components/Icon'
 import { SearchField } from '@/components/SearchField'
-import { clinics, specialties, type SpecialtyId } from '@/lib/data'
+import { getCatalog } from '@/lib/catalog'
+import { specialties, type SpecialtyId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
 
 export default async function HomePage() {
+  const { clinics, doctors } = await getCatalog()
   const { locale, t } = await getI18n()
   const accentsById = await getClinicAccents()
   return (
@@ -32,7 +34,7 @@ export default async function HomePage() {
           </div>
           <div className="grid">
             {clinics.slice(0, 3).map((c) => (
-              <ClinicCard key={c.id} clinic={c} accent={accentsById[c.id]} locale={locale} t={t} />
+              <ClinicCard key={c.id} clinic={c} doctorCount={doctors.filter((d) => d.clinicId === c.id).length} accent={accentsById[c.id]} locale={locale} t={t} />
             ))}
           </div>
         </div>
