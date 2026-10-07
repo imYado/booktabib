@@ -5,7 +5,9 @@ import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
 import { cities, doctorsAt, getClinic, specialties } from '@/lib/data'
 import { formatNumber } from '@/lib/format'
+import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
+import { getClinicAccent } from '@/lib/settings'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -20,9 +22,10 @@ export default async function ClinicPage({ params }: Props) {
   const clinic = getClinic((await params).id)
   if (!clinic) notFound()
   const team = doctorsAt(clinic.id)
+  const accent = await getClinicAccent(clinic.id)
 
   return (
-    <>
+    <div style={accentStyle(accent)}>
       <section className="section-tight">
         <div className="container split" style={{ paddingTop: 32 }}>
           <div>
@@ -88,6 +91,6 @@ export default async function ClinicPage({ params }: Props) {
         </div>
       </section>
       <div style={{ height: 72 }} />
-    </>
+    </div>
   )
 }

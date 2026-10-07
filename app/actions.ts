@@ -7,11 +7,13 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
 import { users, type BookingStatus } from '@/db/schema'
-import { canUpdateBooking, endSession, getCurrentUser, startSession } from '@/lib/auth'
+import { isAccent } from '@/lib/accents'
+import { canManageClinic, canManageDoctor, canUpdateBooking, endSession, getCurrentUser, startSession } from '@/lib/auth'
 import { getClinic, getDoctor } from '@/lib/data'
 import { isLocale, LOCALE_COOKIE } from '@/lib/i18n'
 import { randomId } from '@/lib/ids'
 import { hashPassword, verifyPassword } from '@/lib/password'
+import { setClinicAccent, setDoctorWhatsapp } from '@/lib/settings'
 import { createBooking, getBooking, setStatus, SlotTakenError } from '@/lib/store'
 
 export async function setLocale(formData: FormData) {
@@ -141,12 +143,16 @@ export async function createStaff(_prev: CreateStaffState, formData: FormData): 
   const role = text(formData, 'role')
   const doctorId = text(formData, 'doctorId') || null
   const doctor = doctorId ? getDoctor(doctorId) : undefined
-  const clinicId = doctor?.clinicId ?? (text(formData, 'clinicId') || null)
+  // A doctor's clinic comes from the doctor; an assistant picks a clinic, and optionally one doctor in it.
+  const clinicId = role === 'doctor' ? (doctor?.clinicId ?? null) : text(formData, 'clinicId') || null
 
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !['assistant', 'doctor', 'admin'].includes(role)) {
     return { ok: false, error: 'missing' }
   }
-  if ((role === 'assistant' && !(clinicId && getClinic(clinicId))) || (role === 'doctor' && !doctor)) {
+  if (
+    (role === 'assistant' && (!(clinicId && getClinic(clinicId)) || (doctorId && doctor?.clinicId !== clinicId))) ||
+    (role === 'doctor' && !doctor)
+  ) {
     return { ok: false, error: 'clinic' }
   }
 
@@ -161,9 +167,30 @@ export async function createStaff(_prev: CreateStaffState, formData: FormData): 
     name,
     role: role as 'assistant' | 'doctor' | 'admin',
     clinicId: role === 'admin' ? null : clinicId,
-    doctorId: role === 'doctor' ? doctorId : null,
+    doctorId: role === 'admin' ? null : doctorId,
     passwordHash: await hashPassword(password),
   })
   revalidatePath('/admin')
   return { ok: true, email, password }
+}
+
+export async function updateClinicAccent(formData: FormData) {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const clinicId = text(formData, 'clinicId')
+  const accent = text(formData, 'accent')
+  if (!getClinic(clinicId) || !isAccent(accent) || !canManageClinic(user, clinicId)) return
+  await setClinicAccent(clinicId, accent)
+  revalidatePath('/', 'layout')
+}
+
+export async function updateDoctorWhatsapp(formData: FormData) {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const doctor = getDoctor(text(formData, 'doctorId'))
+  // Keep a leading + and digits only; an empty value falls back to the clinic number.
+  const whatsapp = text(formData, 'whatsapp', 30).replace(/(?!^\+)[^\d]/g, '')
+  if (!doctor || !canManageDoctor(user, doctor) || (whatsapp && whatsapp.replace('+', '').length < 8)) return
+  await setDoctorWhatsapp(doctor.id, whatsapp)
+  revalidatePath('/', 'layout')
 }

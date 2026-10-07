@@ -64,6 +64,18 @@ export const bookings = pgTable(
   ],
 )
 
+// Settings clinic staff can change themselves. Clinics and doctors are ids from lib/data.ts.
+export const clinicSettings = pgTable('clinic_settings', {
+  clinicId: text('clinic_id').primaryKey(),
+  accent: text('accent').notNull().default('paper'),
+})
+
+export const doctorSettings = pgTable('doctor_settings', {
+  doctorId: text('doctor_id').primaryKey(),
+  // Where the patient's live link sends WhatsApp messages. Empty means the clinic number.
+  whatsapp: text('whatsapp').notNull().default(''),
+})
+
 export type User = typeof users.$inferSelect
 export type Booking = typeof bookings.$inferSelect
 export type BookingStatus = Booking['status']

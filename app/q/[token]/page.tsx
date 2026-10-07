@@ -5,7 +5,9 @@ import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { getClinic, getDoctor, MINUTES_PER_PATIENT, whatsappNumber } from '@/lib/data'
 import { CLINIC_TIME_ZONE, formatDay, todayISO } from '@/lib/format'
+import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
+import { contactNumberFor, getClinicAccent } from '@/lib/settings'
 import { getBookingByLiveToken, queuePosition } from '@/lib/store'
 
 // The patient's live queue page. Anyone holding the link can open it, so it shows only
@@ -66,10 +68,13 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
   const position = booking.status === 'approved' && isToday ? await queuePosition(booking) : null
   const estimate = position ? toHHMM(Math.max(toMinutes(booking.time), minutesNow() + position.ahead * MINUTES_PER_PATIENT)) : null
   const { lat, lng } = clinic?.location ?? { lat: 0, lng: 0 }
-  const wa = clinic ? `https://wa.me/${whatsappNumber(clinic.phone)}?text=${encodeURIComponent(t.live.whatsappText(booking.ticket))}` : null
+  // WhatsApp goes to the doctor's own number when the clinic set one, otherwise to the clinic.
+  const contact = await contactNumberFor(booking.doctorId)
+  const wa = contact ? `https://wa.me/${whatsappNumber(contact)}?text=${encodeURIComponent(t.live.whatsappText(booking.ticket))}` : null
+  const accent = await getClinicAccent(booking.clinicId)
 
   return (
-    <main className="live">
+    <main className="live" style={accentStyle(accent)}>
       {active && <AutoRefresh seconds={10} />}
       {header}
 

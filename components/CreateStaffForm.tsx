@@ -5,6 +5,7 @@ import { createStaff, type CreateStaffState } from '@/app/actions'
 import type { Dictionary } from '@/lib/i18n'
 
 type Option = { value: string; label: string }
+type DoctorOption = Option & { shortLabel: string; clinicId: string }
 
 export function CreateStaffForm({
   t,
@@ -15,7 +16,7 @@ export function CreateStaffForm({
   t: Dictionary['admin']
   labels: { name: string; email: string; missing: string; exists: string }
   clinics: Option[]
-  doctors: Option[]
+  doctors: DoctorOption[]
 }) {
   const [state, action, pending] = useActionState<CreateStaffState, FormData>(createStaff, null)
 
@@ -53,9 +54,10 @@ function Fields({
   t: Dictionary['admin']
   labels: { name: string; email: string }
   clinics: Option[]
-  doctors: Option[]
+  doctors: DoctorOption[]
 }) {
   const [role, setRole] = useState('assistant')
+  const [clinicId, setClinicId] = useState(clinics[0]?.value ?? '')
   return (
     <>
       <div className="field">
@@ -77,12 +79,34 @@ function Fields({
       {role === 'assistant' && (
         <div className="field">
           <label htmlFor="staff-clinic">{t.clinic}</label>
-          <select id="staff-clinic" name="clinicId" className="select" required>
+          <select
+            id="staff-clinic"
+            name="clinicId"
+            className="select"
+            required
+            value={clinicId}
+            onChange={(e) => setClinicId(e.target.value)}
+          >
             {clinics.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
               </option>
             ))}
+          </select>
+        </div>
+      )}
+      {role === 'assistant' && (
+        <div className="field">
+          <label htmlFor="staff-for">{t.assistantFor}</label>
+          <select id="staff-for" name="doctorId" className="select" defaultValue="" key={clinicId}>
+            <option value="">{t.wholeClinic}</option>
+            {doctors
+              .filter((d) => d.clinicId === clinicId)
+              .map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.shortLabel}
+                </option>
+              ))}
           </select>
         </div>
       )}

@@ -5,6 +5,7 @@ import { SearchField } from '@/components/SearchField'
 import { cities, clinics, doctorsAt, specialties, type CityId, type SpecialtyId } from '@/lib/data'
 import { locales } from '@/lib/i18n'
 import { getI18n } from '@/lib/locale'
+import { getClinicAccents } from '@/lib/settings'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
@@ -19,6 +20,7 @@ function matches(haystack: Record<string, string>, needle: string) {
 
 export default async function ClinicsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { locale, t } = await getI18n()
+  const accentsById = await getClinicAccents()
   const params = await searchParams
   const q = (params.q ?? '').trim().toLowerCase()
   const city = params.city && params.city in cities ? (params.city as CityId) : undefined
@@ -81,7 +83,7 @@ export default async function ClinicsPage({ searchParams }: { searchParams: Prom
         {results.length ? (
           <div className="grid" style={{ marginTop: 24, marginBottom: 72 }}>
             {results.map((c) => (
-              <ClinicCard key={c.id} clinic={c} locale={locale} t={t} />
+              <ClinicCard key={c.id} clinic={c} accent={accentsById[c.id]} locale={locale} t={t} />
             ))}
           </div>
         ) : (
