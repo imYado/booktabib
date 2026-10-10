@@ -13,7 +13,8 @@ import { getCatalog } from '@/lib/catalog'
 import { isLocale, LOCALE_COOKIE } from '@/lib/i18n'
 import { todayISO } from '@/lib/format'
 import { randomId } from '@/lib/ids'
-import { hashPassword, verifyPassword } from '@/lib/password'
+import { hashPassword, isWeakPassword, verifyPasswordOrDummy } from '@/lib/password'
+import { clearLimit, clientIp, hit, isLimited, overLimit } from '@/lib/rate-limit'
 import { setClinicAccent, setDoctorWhatsapp } from '@/lib/settings'
 import { addWalkIn, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
 
@@ -45,6 +46,12 @@ export async function requestBooking(formData: FormData) {
   if (!getDoctor(doctorId)) redirect('/clinics')
   if (!patientName || !phone || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
     redirect(`${back}&error=missing`)
+  }
+  // Stops one person or script from filling a doctor's day with fake bookings.
+  // The IP limit is generous because many phones share one address on mobile networks.
+  const digits = phone.replace(/\D/g, '')
+  if ((await overLimit(`booking:ip:${await clientIp()}`, 20, 60)) || (await overLimit(`booking:phone:${digits}`, 6, 24 * 60))) {
+    redirect(`${back}&error=busy`)
   }
 
   const user = await getCurrentUser()
@@ -83,12 +90,21 @@ export async function login(formData: FormData) {
   const email = text(formData, 'email', 254).toLowerCase()
   const password = String(formData.get('password') ?? '')
   const next = text(formData, 'next', 500)
+  const q = next ? `&next=${encodeURIComponent(next)}` : ''
+  // After 5 wrong passwords an account is locked for 15 minutes, and one address can try 30 times.
+  const emailKey = `login:email:${email}`
+  const ipKey = `login:ip:${await clientIp()}`
+  if ((await isLimited(emailKey, 5)) || (await isLimited(ipKey, 30))) redirect(`/login?error=locked${q}`)
   const db = await getDb()
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    redirect(`/login?error=invalid${next ? `&next=${encodeURIComponent(next)}` : ''}`)
+  if (!(await verifyPasswordOrDummy(password, user?.passwordHash)) || !user) {
+    await Promise.all([hit(emailKey, 15), hit(ipKey, 15)])
+    redirect(`/login?error=invalid${q}`)
   }
+  await clearLimit(emailKey)
   await startSession(user.id)
+  // A temporary password from the administrator is replaced before anything else.
+  if (user.mustChangePassword) redirect('/account?error=change#security')
   redirect(safeNext(next, landingFor(user.role)))
 }
 
@@ -109,14 +125,21 @@ export async function register(formData: FormData) {
   const q = next ? `&next=${encodeURIComponent(next)}` : ''
 
   if (!name || !phone || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(`/register?error=missing${q}`)
-  if (password.length < 8 || password.length > 200) redirect(`/register?error=weak${q}`)
+  if (isWeakPassword(password, email)) redirect(`/register?error=weak${q}`)
+  if (await overLimit(`register:ip:${await clientIp()}`, 20, 60)) redirect(`/register?error=locked${q}`)
 
   // The ADMIN_EMAIL address becomes the administrator only together with the secret ADMIN_SETUP_CODE.
   // Without the code nobody can register that address, so it can't be claimed by someone else first.
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
   const isAdmin = Boolean(adminEmail && email === adminEmail)
-  if (isAdmin && !setupCodeMatches(String(formData.get('setupCode') ?? ''))) {
-    redirect(`/register?error=reserved&setup=1${q}`)
+  if (isAdmin) {
+    // The setup code is the only thing guarding the admin account, so wrong guesses are limited
+    // for everyone together: 5 an hour, wherever they come from.
+    if (await isLimited('setup-code', 5)) redirect(`/register?error=locked&setup=1${q}`)
+    if (!setupCodeMatches(String(formData.get('setupCode') ?? ''))) {
+      await hit('setup-code', 60)
+      redirect(`/register?error=reserved&setup=1${q}`)
+    }
   }
   const role = isAdmin ? 'admin' : 'patient'
 
@@ -172,6 +195,7 @@ export async function createStaff(_prev: CreateStaffState, formData: FormData): 
     clinicId: role === 'admin' ? null : clinicId,
     doctorId: role === 'admin' ? null : doctorId,
     passwordHash: await hashPassword(password),
+    mustChangePassword: true,
   })
   revalidatePath('/admin')
   return { ok: true, email, password }

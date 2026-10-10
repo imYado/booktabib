@@ -13,7 +13,7 @@ type Props = { searchParams: Promise<{ next?: string; error?: string; setup?: st
 export default async function RegisterPage({ searchParams }: Props) {
   const { t } = await getI18n()
   const { next = '', error, setup } = await searchParams
-  const messages: Record<string, string> = { exists: t.auth.exists, weak: t.auth.weak, missing: t.auth.missing, reserved: t.auth.reserved }
+  const messages: Record<string, string> = { exists: t.auth.exists, weak: t.auth.weak, missing: t.auth.missing, reserved: t.auth.reserved, locked: t.auth.locked }
   const message = error ? messages[error] : null
 
   return (

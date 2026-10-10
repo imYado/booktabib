@@ -8,13 +8,25 @@ import { getDb } from '@/db'
 import { favorites, sessions, users } from '@/db/schema'
 import { endOtherSessions, endSession, getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { hashPassword, verifyPassword } from '@/lib/password'
+import { hashPassword, isWeakPassword, verifyPassword } from '@/lib/password'
+import { hit, isLimited } from '@/lib/rate-limit'
 import { isTheme, THEME_COOKIE } from '@/lib/theme'
 
 // The signed-in user's own profile: details, favourites, theme, password and account.
 
 function text(formData: FormData, key: string, max = 200) {
   return String(formData.get(key) ?? '').trim().slice(0, max)
+}
+
+/** Checks the user's own password, allowing 5 wrong tries every 15 minutes. */
+async function passwordOk(userId: string, password: string) {
+  const key = `password:user:${userId}`
+  if (await isLimited(key, 5)) return 'locked'
+  const db = await getDb()
+  const [row] = await db.select({ hash: users.passwordHash }).from(users).where(eq(users.id, userId)).limit(1)
+  if (row && (await verifyPassword(password, row.hash))) return 'ok'
+  await hit(key, 15)
+  return 'wrong'
 }
 
 async function me() {
@@ -70,11 +82,11 @@ export async function changePassword(formData: FormData) {
   const user = await me()
   const current = String(formData.get('current') ?? '')
   const next = String(formData.get('password') ?? '')
+  const check = await passwordOk(user.id, current)
+  if (check !== 'ok') redirect(`/account?error=${check === 'locked' ? 'locked' : 'password'}#security`)
+  if (isWeakPassword(next, user.email) || next === current) redirect('/account?error=weak#security')
   const db = await getDb()
-  const [row] = await db.select({ hash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1)
-  if (!row || !(await verifyPassword(current, row.hash))) redirect('/account?error=password#security')
-  if (next.length < 8 || next.length > 200) redirect('/account?error=weak#security')
-  await db.update(users).set({ passwordHash: await hashPassword(next) }).where(eq(users.id, user.id))
+  await db.update(users).set({ passwordHash: await hashPassword(next), mustChangePassword: false }).where(eq(users.id, user.id))
   // Other devices have to log in again with the new password; this one stays signed in.
   await endOtherSessions(user.id)
   redirect('/account?saved=password#security')
@@ -92,9 +104,9 @@ export async function logoutEverywhere() {
 export async function deleteOwnAccount(formData: FormData) {
   const user = await me()
   if (user.role !== 'patient') redirect('/account')
+  const check = await passwordOk(user.id, String(formData.get('password') ?? ''))
+  if (check !== 'ok') redirect(`/account?error=${check === 'locked' ? 'locked' : 'password'}#delete`)
   const db = await getDb()
-  const [row] = await db.select({ hash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1)
-  if (!row || !(await verifyPassword(String(formData.get('password') ?? ''), row.hash))) redirect('/account?error=password#delete')
   await endSession()
   await db.delete(users).where(eq(users.id, user.id))
   redirect('/')

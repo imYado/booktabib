@@ -1,6 +1,6 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
-import { and, eq, gt, ne } from 'drizzle-orm'
+import { and, eq, gt, lt, ne } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { cache } from 'react'
@@ -22,6 +22,7 @@ export async function startSession(userId: string) {
   const token = randomToken()
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000)
   const db = await getDb()
+  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()))
   await db.insert(sessions).values({ id: hashToken(token), userId, expiresAt })
   ;(await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -63,6 +64,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       gender: users.gender,
       birthDate: users.birthDate,
       role: users.role,
+      mustChangePassword: users.mustChangePassword,
       clinicId: users.clinicId,
       doctorId: users.doctorId,
       createdAt: users.createdAt,
@@ -79,6 +81,8 @@ export async function requireUser(roles: Role[], next: string): Promise<SessionU
   const user = await getCurrentUser()
   if (!user) redirect(`/login?next=${encodeURIComponent(next)}`)
   if (!roles.includes(user.role)) redirect('/login?denied=1')
+  // Someone signed in with a temporary password from the administrator picks their own first.
+  if (user.mustChangePassword && next !== '/account') redirect('/account?error=change#security')
   return user
 }
 

@@ -313,7 +313,7 @@ export async function resetPassword(_prev: ResetPasswordState, formData: FormDat
   const [user] = await db.select({ role: users.role }).from(users).where(eq(users.id, id)).limit(1)
   if (!user || user.role === 'patient') return null
   const password = randomId(12).toLowerCase()
-  await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, id))
+  await db.update(users).set({ passwordHash: await hashPassword(password), mustChangePassword: true }).where(eq(users.id, id))
   await db.delete(sessions).where(eq(sessions.userId, id))
   return { password }
 }

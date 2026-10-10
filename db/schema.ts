@@ -15,6 +15,8 @@ export const users = pgTable('users', {
   gender: text('gender').notNull().default(''),
   birthDate: date('birth_date'),
   role: roleEnum('role').notNull().default('patient'),
+  // Set when an administrator hands out a temporary password; cleared when the user picks their own.
+  mustChangePassword: boolean('must_change_password').notNull().default(false),
   // Staff are tied to the clinic or doctor they work for (ids from lib/data.ts).
   clinicId: text('clinic_id'),
   doctorId: text('doctor_id'),
@@ -114,6 +116,14 @@ export const doctors = pgTable(
 )
 
 // Uploaded clinic and doctor photos, kept in the database so no extra storage service is needed.
+// Counts recent attempts (logins, sign-ups, bookings) so they can't be repeated endlessly.
+export const rateLimits = pgTable('rate_limits', {
+  // SHA-256 of what is counted, e.g. "login:email:<address>", so emails and IP addresses are not stored.
+  key: text('key').primaryKey(),
+  count: integer('count').notNull().default(0),
+  resetAt: timestamp('reset_at', { withTimezone: true }).notNull(),
+})
+
 export const images = pgTable('images', {
   id: text('id').primaryKey(),
   contentType: text('content_type').notNull(),
