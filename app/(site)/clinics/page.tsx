@@ -7,6 +7,8 @@ import { cities, specialties, specialtyIds, type CityId, type SpecialtyId } from
 import { locales } from '@/lib/i18n'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
+import { getCurrentUser } from '@/lib/auth'
+import { getFavoriteIds } from '@/lib/favorites'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
@@ -22,7 +24,7 @@ function matches(haystack: Record<string, string>, needle: string) {
 export default async function ClinicsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { clinics, doctors, doctorsAt } = await getCatalog()
   const { locale, t } = await getI18n()
-  const accentsById = await getClinicAccents()
+  const [accentsById, user, favoriteIds] = await Promise.all([getClinicAccents(), getCurrentUser(), getFavoriteIds()])
   const params = await searchParams
   const q = (params.q ?? '').trim().toLowerCase()
   const city = params.city && params.city in cities ? (params.city as CityId) : undefined
@@ -85,7 +87,15 @@ export default async function ClinicsPage({ searchParams }: { searchParams: Prom
         {results.length ? (
           <div className="grid" style={{ marginTop: 24, marginBottom: 72 }}>
             {results.map((c) => (
-              <ClinicCard key={c.id} clinic={c} doctorCount={doctors.filter((d) => d.clinicId === c.id).length} accent={accentsById[c.id]} locale={locale} t={t} />
+              <ClinicCard
+                key={c.id}
+                clinic={c}
+                doctorCount={doctors.filter((d) => d.clinicId === c.id).length}
+                accent={accentsById[c.id]}
+                favorite={{ liked: favoriteIds.includes(c.id), signedIn: !!user }}
+                locale={locale}
+                t={t}
+              />
             ))}
           </div>
         ) : (

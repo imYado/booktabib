@@ -6,11 +6,13 @@ import { getCatalog } from '@/lib/catalog'
 import { specialties, specialtyIds } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
+import { getCurrentUser } from '@/lib/auth'
+import { getFavoriteIds } from '@/lib/favorites'
 
 export default async function HomePage() {
   const { clinics, doctors } = await getCatalog()
   const { locale, t } = await getI18n()
-  const accentsById = await getClinicAccents()
+  const [accentsById, user, favoriteIds] = await Promise.all([getClinicAccents(), getCurrentUser(), getFavoriteIds()])
   return (
     <>
       <section className="section">
@@ -43,6 +45,7 @@ export default async function HomePage() {
                 clinic={c}
                 doctorCount={doctors.filter((d) => d.clinicId === c.id).length}
                 accent={accentsById[c.id]}
+                favorite={{ liked: favoriteIds.includes(c.id), signedIn: !!user }}
                 locale={locale}
                 t={t}
               />

@@ -10,6 +10,8 @@ import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccent } from '@/lib/settings'
 import { getCurrentUser } from '@/lib/auth'
+import { getFavoriteIds } from '@/lib/favorites'
+import { HeartButton } from '@/components/HeartButton'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -27,7 +29,7 @@ export default async function ClinicPage({ params }: Props) {
   if (!clinic) notFound()
   const team = doctorsAt(clinic.id)
   const accent = await getClinicAccent(clinic.id)
-  const user = await getCurrentUser()
+  const [user, favoriteIds] = await Promise.all([getCurrentUser(), getFavoriteIds()])
 
   return (
     <div style={accentStyle(accent)}>
@@ -35,7 +37,15 @@ export default async function ClinicPage({ params }: Props) {
         <div className="container split" style={{ paddingTop: 32 }}>
           <div>
             <p className="eyebrow">{clinic.specialties.map((s) => specialties[s][locale]).join(' · ')}</p>
-            <h1>{clinic.name[locale]}</h1>
+            <div className="row" style={{ alignItems: 'start', flexWrap: 'nowrap', gap: 8 }}>
+              <h1 style={{ flex: 1 }}>{clinic.name[locale]}</h1>
+              <HeartButton
+                clinicId={clinic.id}
+                liked={favoriteIds.includes(clinic.id)}
+                signedIn={!!user}
+                labels={{ like: t.profile.like, unlike: t.profile.unlike, loginToLike: t.profile.loginToLike }}
+              />
+            </div>
             {user?.role === 'admin' && (
               <Link href={`/admin/clinics/${clinic.id}`} className="btn btn-secondary btn-sm" style={{ marginBottom: 16 }}>
                 <Icon name="edit" size={16} />

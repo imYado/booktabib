@@ -1,4 +1,4 @@
-type IconName = 'search' | 'pin' | 'arrow' | 'clock' | 'star' | 'calendar' | 'phone' | 'image' | 'check' | 'x' | 'user' | 'grip' | 'plus' | 'edit' | 'trash' | 'undo'
+type IconName = 'search' | 'pin' | 'arrow' | 'clock' | 'star' | 'calendar' | 'phone' | 'image' | 'check' | 'x' | 'user' | 'grip' | 'plus' | 'edit' | 'trash' | 'undo' | 'heart'
 
 const paths: Record<IconName, React.ReactNode> = {
   grip: (
@@ -12,6 +12,7 @@ const paths: Record<IconName, React.ReactNode> = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  heart: <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20Z" />,
   edit: <path d="M4 20h4L19 9l-4-4L4 16v4ZM14 6l4 4" />,
   trash: <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" />,
   undo: <path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" />,

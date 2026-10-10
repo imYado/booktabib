@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import type { Localized } from '../lib/i18n'
-import { bigint, boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, real, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { bigint, boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, real, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const roleEnum = pgEnum('role', ['patient', 'assistant', 'doctor', 'admin'])
 export const bookingStatusEnum = pgEnum('booking_status', ['pending', 'approved', 'cancelled', 'in_progress', 'done'])
@@ -11,6 +11,9 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   phone: text('phone').notNull().default(''),
   passwordHash: text('password_hash').notNull(),
+  // Optional profile details: 'male', 'female' or '' (not given), and date of birth.
+  gender: text('gender').notNull().default(''),
+  birthDate: date('birth_date'),
   role: roleEnum('role').notNull().default('patient'),
   // Staff are tied to the clinic or doctor they work for (ids from lib/data.ts).
   clinicId: text('clinic_id'),
@@ -117,6 +120,21 @@ export const images = pgTable('images', {
   data: text('data').notNull(), // base64
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+// Clinics a user has hearted, shown on their profile.
+export const favorites = pgTable(
+  'favorites',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.clinicId] })],
+)
 
 // Settings clinic staff can change themselves. Clinics and doctors are ids from lib/data.ts.
 export const clinicSettings = pgTable('clinic_settings', {
