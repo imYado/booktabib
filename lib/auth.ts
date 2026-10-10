@@ -1,6 +1,6 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
-import { and, eq, gt } from 'drizzle-orm'
+import { and, eq, gt, ne } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { cache } from 'react'
@@ -42,6 +42,13 @@ export async function endSession() {
   jar.delete(SESSION_COOKIE)
 }
 
+/** Signs a user out on every device except this one. */
+export async function endOtherSessions(userId: string) {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value
+  const db = await getDb()
+  await db.delete(sessions).where(and(eq(sessions.userId, userId), ne(sessions.id, token ? hashToken(token) : '')))
+}
+
 /** The signed-in user for this request, or null. */
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value
@@ -53,6 +60,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       email: users.email,
       name: users.name,
       phone: users.phone,
+      gender: users.gender,
+      birthDate: users.birthDate,
       role: users.role,
       clinicId: users.clinicId,
       doctorId: users.doctorId,

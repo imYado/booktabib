@@ -20,7 +20,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             {(role === 'assistant' || role === 'admin') && <Link href="/assistant">{t.nav.assistant}</Link>}
             {(role === 'doctor' || role === 'admin') && <Link href="/doctor">{t.nav.doctor}</Link>}
             {role === 'admin' && <Link href="/admin">{t.nav.admin}</Link>}
-            {role === 'patient' && <Link href="/account">{t.nav.account}</Link>}
+            {user && <Link href="/account">{t.nav.account}</Link>}
             {user ? (
               <form action={logout}>
                 <button type="submit" className="btn btn-secondary btn-sm">

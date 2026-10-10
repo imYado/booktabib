@@ -27,6 +27,14 @@
   --leading-body: 1.6;
 }
 
+/* A theme chosen on the profile page overrides the device setting. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 /* Arabic and Kurdish Sorani: Vazirmatn, no negative tracking, roomier lines. */
 :root[dir='rtl'] {
   --font-heading: var(--font-vazirmatn), Vazirmatn, Tahoma, Arial, sans-serif;
@@ -1203,6 +1211,85 @@ dl.details dd {
 }
 @media (prefers-reduced-motion: reduce) {
   .saved-note {
+    animation: none;
+  }
+}
+
+/* Favourite heart. On a photo it is white with a soft shadow; elsewhere it uses the ink colour. */
+
+.card-wrap {
+  position: relative;
+}
+.card-wrap > .heart-btn {
+  position: absolute;
+  top: 32px;
+  inset-inline-end: 32px;
+}
+.heart-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+.heart-btn:hover {
+  background: var(--paper);
+}
+.heart-btn:active {
+  transform: scale(0.9);
+}
+.heart-shape {
+  fill: transparent;
+  stroke: currentColor;
+  transition: fill var(--speed) var(--ease);
+}
+.heart-shape.is-filled {
+  fill: currentColor;
+}
+.heart-btn.on-photo {
+  color: #ffffff;
+}
+.heart-btn.on-photo:hover {
+  background: rgb(0 0 0 / 0.08);
+}
+.heart-btn.on-photo .heart-shape {
+  fill: rgb(0 0 0 / 0.06);
+}
+.heart-btn.on-photo .heart-shape.is-filled {
+  fill: #ffffff;
+}
+.heart-btn.on-photo svg {
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+}
+.heart-btn[aria-pressed='true'] svg {
+  animation: heart-pop 0.3s var(--ease);
+}
+@keyframes heart-pop {
+  50% {
+    transform: scale(1.18);
+  }
+}
+.theme-switch {
+  --lang-w: 96px;
+  width: max-content;
+}
+.profile-grid {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .profile-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heart-btn[aria-pressed='true'] svg {
     animation: none;
   }
 }

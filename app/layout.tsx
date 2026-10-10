@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Archivo, Hanken_Grotesk, Vazirmatn } from 'next/font/google'
 import { dirFor } from '@/lib/i18n'
 import { getI18n } from '@/lib/locale'
+import { cookies } from 'next/headers'
+import { isTheme, THEME_COOKIE } from '@/lib/theme'
 import './globals.css'
 
 const archivo = Archivo({ subsets: ['latin'], weight: ['700', '800'], variable: '--font-archivo', display: 'swap' })
@@ -31,8 +33,14 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale } = await getI18n()
+  // A theme picked on the profile page; without one the device setting decides.
+  const theme = (await cookies()).get(THEME_COOKIE)?.value
   return (
-    <html lang={locale} dir={dirFor(locale)} className={`${archivo.variable} ${hanken.variable} ${vazirmatn.variable}`}>
+    <html
+      lang={locale}
+      dir={dirFor(locale)}
+      data-theme={isTheme(theme) && theme !== 'system' ? theme : undefined}
+      className={`${archivo.variable} ${hanken.variable} ${vazirmatn.variable}`}>
       <body>{children}</body>
     </html>
   )
