@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import type { Localized } from '../lib/i18n'
-import { bigint, boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, real, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { bigint, boolean, check, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const roleEnum = pgEnum('role', ['patient', 'assistant', 'doctor', 'admin'])
 export const bookingStatusEnum = pgEnum('booking_status', ['pending', 'approved', 'cancelled', 'in_progress', 'done'])
@@ -84,8 +84,6 @@ export const clinics = pgTable('clinics', {
   phone: text('phone').notNull().default(''),
   lat: doublePrecision('lat').notNull().default(0),
   lng: doublePrecision('lng').notNull().default(0),
-  rating: real('rating').notNull().default(0),
-  reviews: integer('reviews').notNull().default(0),
   specialties: jsonb('specialties').$type<string[]>().notNull().default([]),
   about: jsonb('about').$type<Localized>().notNull(),
   imageId: text('image_id'),
@@ -130,6 +128,22 @@ export const images = pgTable('images', {
   data: text('data').notNull(), // base64
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+// A user's 1 to 5 star rating of a clinic they have booked at. One per user and clinic; rating again replaces it.
+export const clinicRatings = pgTable(
+  'clinic_ratings',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id, { onDelete: 'cascade' }),
+    stars: integer('stars').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.clinicId] }), index('clinic_ratings_clinic_idx').on(t.clinicId), check('clinic_ratings_stars', sql`${t.stars} between 1 and 5`)],
+)
 
 // Clinics a user has hearted, shown on their profile.
 export const favorites = pgTable(
