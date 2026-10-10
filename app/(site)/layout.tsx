@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { logout } from '@/app/actions'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { getCurrentUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
@@ -20,18 +19,10 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             {(role === 'assistant' || role === 'admin') && <Link href="/assistant">{t.nav.assistant}</Link>}
             {(role === 'doctor' || role === 'admin') && <Link href="/doctor">{t.nav.doctor}</Link>}
             {role === 'admin' && <Link href="/admin">{t.nav.admin}</Link>}
-            {user && <Link href="/account">{t.nav.account}</Link>}
-            {user ? (
-              <form action={logout}>
-                <button type="submit" className="btn btn-secondary btn-sm">
-                  {t.nav.logout}
-                </button>
-              </form>
-            ) : (
-              <Link href="/login" className="btn btn-secondary btn-sm">
-                {t.nav.login}
-              </Link>
-            )}
+            {/* Signed in, the button slot opens the profile, where Log out lives. */}
+            <Link href={user ? '/account' : '/login'} className="btn btn-secondary btn-sm">
+              {user ? t.nav.account : t.nav.login}
+            </Link>
           </nav>
           <LanguageSwitcher locale={locale} label={t.common.switchTo} />
         </div>
