@@ -1,11 +1,20 @@
 /* booktabib design system: see spec section 3 (Design). */
 
+/*
+ * Light and dark follow the device setting. Dark mode uses the logo's colours: its near-black
+ * background and its warm off-white letters. "--white" is the page and "--ink" the text, so in
+ * dark mode they swap roles and everything built on them (buttons, the search bar) follows.
+ */
 :root {
-  --white: #ffffff;
-  --paper: #f2ede3;
-  --ink: #1b1a17;
-  --caption: #5c574e;
-  --rule: #e4ded2;
+  color-scheme: light dark;
+  --white: light-dark(#ffffff, #1b1a16);
+  --paper: light-dark(#f2ede3, #25221c);
+  --ink: light-dark(#1b1a17, #ebe9de);
+  --caption: light-dark(#5c574e, #a8a497);
+  --rule: light-dark(#e4ded2, #36332c);
+  --danger: light-dark(#a3271f, #f0a199);
+  --danger-paper: light-dark(#f2e3e3, #2a1d19);
+  --danger-rule: light-dark(#e6cfcf, #4a3430);
 
   --max: 1200px;
   --gutter: 20px;
@@ -511,7 +520,7 @@ fieldset {
   transition: background-color var(--speed) var(--ease);
 }
 .search-input::placeholder {
-  color: #a8a39a;
+  color: light-dark(#a8a39a, #77736a);
 }
 .search-input::-webkit-search-cancel-button {
   -webkit-appearance: none;
@@ -917,7 +926,7 @@ dl.details dd {
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  border: 1px solid rgb(27 26 23 / 0.12);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
   margin-inline-end: 8px;
   flex: none;
 }
@@ -1157,12 +1166,12 @@ dl.details dd {
 .btn-danger {
   background: var(--white);
   border-color: var(--rule);
-  color: #a3271f;
+  color: var(--danger);
 }
 .btn-danger:hover {
   opacity: 1;
-  background: #f2e3e3;
-  border-color: #e6cfcf;
+  background: var(--danger-paper);
+  border-color: var(--danger-rule);
 }
 .editor > summary {
   list-style: none;
@@ -1190,7 +1199,7 @@ dl.details dd {
   }
 }
 .danger-zone {
-  border-color: #e6cfcf;
+  border-color: var(--danger-rule);
 }
 @media (prefers-reduced-motion: reduce) {
   .saved-note {
