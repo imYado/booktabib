@@ -111,14 +111,6 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
                 <label htmlFor="clinic-lng">{t.edit.lng}</label>
                 <input id="clinic-lng" name="lng" type="number" step="any" min={-180} max={180} className="input" defaultValue={clinic.location.lng} dir="ltr" />
               </div>
-              <div className="field">
-                <label htmlFor="clinic-rating">{t.edit.rating}</label>
-                <input id="clinic-rating" name="rating" type="number" step="0.1" min={0} max={5} className="input" defaultValue={clinic.rating} dir="ltr" />
-              </div>
-              <div className="field">
-                <label htmlFor="clinic-reviews">{t.edit.reviews}</label>
-                <input id="clinic-reviews" name="reviews" type="number" min={0} className="input" defaultValue={clinic.reviews} dir="ltr" />
-              </div>
             </div>
             <p className="caption" style={{ margin: 0 }}>
               {t.edit.mapHint}
