@@ -69,12 +69,12 @@ export default async function ProfilePage({ searchParams }: Props) {
           : p.saved
         : error && section === 'details' && error === 'missing'
           ? p.missing
-          : error && section === 'security' && (error === 'password' || error === 'weak')
-            ? error === 'weak'
-              ? p.weak
-              : p.wrongPassword
-            : error && section === 'delete' && error === 'password'
-              ? p.wrongPassword
+          : section === 'security' && error && ['password', 'weak', 'locked', 'change'].includes(error)
+            ? { weak: p.weak, locked: t.auth.locked, change: p.mustChange }[error] ?? p.wrongPassword
+            : section === 'delete' && (error === 'password' || error === 'locked')
+              ? error === 'locked'
+                ? t.auth.locked
+                : p.wrongPassword
               : null
     if (!message) return null
     return saved === section ? (

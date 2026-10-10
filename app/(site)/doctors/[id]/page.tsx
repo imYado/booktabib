@@ -151,7 +151,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             </div>
             {error && (
               <p className="notice" role="alert">
-                {error === 'taken' ? t.doctorProfile.taken : t.auth.missing}
+                {error === 'taken' ? t.doctorProfile.taken : error === 'busy' ? t.auth.locked : t.auth.missing}
               </p>
             )}
             <button className="btn btn-block" type="submit" disabled={!slots.length}>

@@ -13,7 +13,7 @@ type Props = { searchParams: Promise<{ next?: string; error?: string; denied?: s
 export default async function LoginPage({ searchParams }: Props) {
   const { t } = await getI18n()
   const { next = '', error, denied } = await searchParams
-  const message = error === 'invalid' ? t.auth.invalid : denied ? t.auth.denied : null
+  const message = error === 'invalid' ? t.auth.invalid : error === 'locked' ? t.auth.locked : denied ? t.auth.denied : null
 
   return (
     <section className="section">
