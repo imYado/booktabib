@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
@@ -46,7 +45,9 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
 
   const header = (
     <header className="live-top">
-      <Image src="/logo.png" alt="booktabib" width={30} height={40} priority />
+      <span className="brand" lang="en">
+        booktabib
+      </span>
       <LanguageSwitcher locale={locale} label={t.common.switchTo} />
     </header>
   )

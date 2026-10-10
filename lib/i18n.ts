@@ -36,7 +36,7 @@ const en = {
     admin: 'Staff',
   },
   home: {
-    title: 'Find the right doctor, and book in a minute.',
+    title: ['Find the right doctor.', 'book in a minute.'],
     lead: 'Browse trusted clinics near you, compare specialties, and request an appointment without a phone call.',
     searchPlaceholder: 'Search clinics, doctors, or specialties',
     search: 'Search',
@@ -339,7 +339,7 @@ const ar: Dictionary = {
     admin: 'الموظفون',
   },
   home: {
-    title: 'اعثر على الطبيب المناسب واحجز خلال دقيقة.',
+    title: ['اعثر على الطبيب المناسب.', 'واحجز خلال دقيقة.'],
     lead: 'تصفّح عيادات موثوقة قريبة منك، وقارن الاختصاصات، واطلب موعداً دون اتصال هاتفي.',
     searchPlaceholder: 'ابحث عن عيادة أو طبيب أو اختصاص',
     search: 'بحث',
@@ -640,7 +640,7 @@ const ckb: Dictionary = {
     admin: 'ستاف',
   },
   home: {
-    title: 'پزیشکی گونجاو بدۆزەرەوە و لە یەک خولەکدا نۆرە بگرە.',
+    title: ['پزیشکی گونجاو بدۆزەرەوە.', 'لە یەک خولەکدا نۆرە بگرە.'],
     lead: 'کلینیکە متمانەپێکراوەکانی نزیک خۆت ببینە، پسپۆڕییەکان بەراورد بکە، و بەبێ پەیوەندی تەلەفۆنی داوای نۆرە بکە.',
     searchPlaceholder: 'بەدوای کلینیک، پزیشک یان پسپۆڕیدا بگەڕێ',
     search: 'گەڕان',

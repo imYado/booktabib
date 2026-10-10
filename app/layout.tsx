@@ -21,7 +21,13 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export const viewport: Viewport = { themeColor: '#ffffff' }
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#1b1a16' },
+  ],
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale } = await getI18n()
