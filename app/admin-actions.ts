@@ -138,8 +138,6 @@ export async function updateClinic(formData: FormData) {
       phone: text(formData, 'phone', 30),
       lat: num(formData, 'lat', -90, 90),
       lng: num(formData, 'lng', -180, 180),
-      rating: Math.round(num(formData, 'rating', 0, 5) * 10) / 10,
-      reviews: Math.round(num(formData, 'reviews', 0, 1_000_000)),
       specialties: formData.getAll('specialties').map(String).filter(isSpecialty),
       ...(imageId !== undefined ? { imageId } : {}),
     })

@@ -100,6 +100,7 @@ export type Clinic = {
   phone: string
   /** Map pin for directions. */
   location: { lat: number; lng: number }
+  /** Average of patients' 1 to 5 star ratings (0 when there are none), and how many there are. */
   rating: number
   reviews: number
   specialties: SpecialtyId[]

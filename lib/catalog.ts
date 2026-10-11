@@ -1,8 +1,8 @@
 import 'server-only'
-import { asc } from 'drizzle-orm'
+import { asc, avg, count } from 'drizzle-orm'
 import { cache } from 'react'
 import { getDb } from '@/db'
-import { clinics as clinicsTable, doctors as doctorsTable } from '@/db/schema'
+import { clinicRatings, clinics as clinicsTable, doctors as doctorsTable } from '@/db/schema'
 import { fillLocalized, isCity, isHonorific, isSpecialty, localizedOrBlank, titledName, type Clinic, type Doctor } from './data'
 
 export type Catalog = {
@@ -16,10 +16,16 @@ export type Catalog = {
 /** All clinics and doctors, read once per request. */
 export const getCatalog = cache(async (): Promise<Catalog> => {
   const db = await getDb()
-  const [clinicRows, doctorRows] = await Promise.all([
+  const [clinicRows, doctorRows, ratingRows] = await Promise.all([
     db.select().from(clinicsTable).orderBy(asc(clinicsTable.createdAt), asc(clinicsTable.id)),
     db.select().from(doctorsTable).orderBy(asc(doctorsTable.sort), asc(doctorsTable.id)),
+    db
+      .select({ clinicId: clinicRatings.clinicId, average: avg(clinicRatings.stars), count: count() })
+      .from(clinicRatings)
+      .groupBy(clinicRatings.clinicId),
   ])
+  // Patients' star ratings, averaged to one decimal.
+  const ratings = new Map(ratingRows.map((r) => [r.clinicId, { rating: Math.round(Number(r.average) * 10) / 10, reviews: r.count }]))
   const clinics: Clinic[] = clinicRows.map((c) => ({
     id: c.id,
     name: fillLocalized(c.name),
@@ -27,8 +33,8 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
     address: fillLocalized(c.address),
     phone: c.phone,
     location: { lat: c.lat, lng: c.lng },
-    rating: c.rating,
-    reviews: c.reviews,
+    rating: ratings.get(c.id)?.rating ?? 0,
+    reviews: ratings.get(c.id)?.reviews ?? 0,
     specialties: c.specialties.filter(isSpecialty),
     about: fillLocalized(c.about),
     imageId: c.imageId,

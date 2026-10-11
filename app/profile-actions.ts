@@ -5,11 +5,12 @@ import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
-import { favorites, sessions, users } from '@/db/schema'
+import { clinicRatings, favorites, sessions, users } from '@/db/schema'
 import { endOtherSessions, endSession, getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { hashPassword, isWeakPassword, verifyPassword } from '@/lib/password'
-import { hit, isLimited } from '@/lib/rate-limit'
+import { hit, isLimited, overLimit } from '@/lib/rate-limit'
+import { canRateClinic } from '@/lib/ratings'
 import { isTheme, THEME_COOKIE } from '@/lib/theme'
 
 // The signed-in user's own profile: details, favourites, theme, password and account.
@@ -48,6 +49,22 @@ export async function toggleFavorite(clinicId: string): Promise<boolean> {
   else await db.insert(favorites).values({ userId: user.id, clinicId }).onConflictDoNothing()
   revalidatePath('/account')
   return !existing
+}
+
+/** Saves a 1 to 5 star rating for a clinic the user has booked at. Returns the saved stars, or 0 if not allowed. */
+export async function rateClinic(clinicId: string, stars: number): Promise<number> {
+  const user = await getCurrentUser()
+  if (!user || typeof clinicId !== 'string' || !Number.isInteger(stars) || stars < 1 || stars > 5) return 0
+  const { getClinic } = await getCatalog()
+  if (!getClinic(clinicId) || !(await canRateClinic(user.id, clinicId))) return 0
+  if (await overLimit(`rate:user:${user.id}`, 30, 10)) return 0
+  const db = await getDb()
+  await db
+    .insert(clinicRatings)
+    .values({ userId: user.id, clinicId, stars })
+    .onConflictDoUpdate({ target: [clinicRatings.userId, clinicRatings.clinicId], set: { stars, updatedAt: new Date() } })
+  revalidatePath('/', 'layout')
+  return stars
 }
 
 export async function setTheme(formData: FormData) {

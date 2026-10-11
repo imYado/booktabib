@@ -36,10 +36,12 @@ export function ClinicCard({
             <Icon name="pin" size={14} />
             {cities[clinic.city][locale]}
           </span>
-          <span>
-            <Icon name="star" size={14} />
-            {formatNumber(locale, clinic.rating)} ({t.clinic.reviews(clinic.reviews)})
-          </span>
+          {clinic.reviews > 0 && (
+            <span>
+              <Icon name="star" size={14} />
+              {formatNumber(locale, clinic.rating)} ({t.clinic.reviews(clinic.reviews)})
+            </span>
+          )}
           <span>
             {t.clinic.doctors}: {formatNumber(locale, doctorCount)}
           </span>

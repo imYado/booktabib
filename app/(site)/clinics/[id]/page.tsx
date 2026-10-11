@@ -12,6 +12,8 @@ import { getClinicAccent } from '@/lib/settings'
 import { getCurrentUser } from '@/lib/auth'
 import { getFavoriteIds } from '@/lib/favorites'
 import { HeartButton } from '@/components/HeartButton'
+import { StarRating } from '@/components/StarRating'
+import { canRateClinic, getMyRating } from '@/lib/ratings'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -30,6 +32,8 @@ export default async function ClinicPage({ params }: Props) {
   const team = doctorsAt(clinic.id)
   const accent = await getClinicAccent(clinic.id)
   const [user, favoriteIds] = await Promise.all([getCurrentUser(), getFavoriteIds()])
+  // Only signed-in users who have booked here may rate the clinic.
+  const [canRate, myRating] = user ? await Promise.all([canRateClinic(user.id, clinic.id), getMyRating(user.id, clinic.id)]) : [false, 0]
 
   return (
     <div style={accentStyle(accent)}>
@@ -60,9 +64,22 @@ export default async function ClinicPage({ params }: Props) {
               </span>
               <span>
                 <Icon name="star" size={16} />
-                {formatNumber(locale, clinic.rating)} ({t.clinic.reviews(clinic.reviews)})
+                {clinic.reviews ? `${formatNumber(locale, clinic.rating)} (${t.clinic.reviews(clinic.reviews)})` : t.clinic.noRatings}
               </span>
             </div>
+            {canRate ? (
+              <StarRating
+                clinicId={clinic.id}
+                initial={myRating}
+                labels={{ title: t.clinic.rate, yours: t.clinic.yourRating, saved: t.clinic.rated, stars: [1, 2, 3, 4, 5].map(t.clinic.stars) }}
+              />
+            ) : (
+              user && (
+                <p className="caption" style={{ marginTop: 20 }}>
+                  {t.clinic.rateHint}
+                </p>
+              )
+            )}
           </div>
           <ClinicPhoto imageId={clinic.imageId} style={{ aspectRatio: '4 / 3', margin: 0 }} />
         </div>

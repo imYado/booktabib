@@ -1293,3 +1293,51 @@ dl.details dd {
     animation: none;
   }
 }
+
+/* Clinic star rating */
+.star-rating {
+  margin-top: 24px;
+}
+.star-rating-title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.star-row {
+  display: flex;
+  gap: 2px;
+  margin-inline-start: -6px;
+}
+.star-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+.star-btn:hover {
+  background: var(--paper);
+}
+.star-btn:active {
+  transform: scale(0.9);
+}
+.star-btn:disabled {
+  cursor: progress;
+}
+.star-shape {
+  fill: transparent;
+  stroke: currentColor;
+  transition: fill var(--speed) var(--ease);
+}
+.star-shape.is-filled {
+  fill: currentColor;
+}
+.star-saved {
+  margin: 4px 0 0;
+}
