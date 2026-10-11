@@ -1,4 +1,6 @@
 import { Icon } from '@/components/Icon'
+import { InstallLink } from '@/components/InstallGuide'
+import { InstallGuideMount } from '@/components/InstallGuideMount'
 import { getI18n } from '@/lib/locale'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -15,9 +17,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             <Icon name="instagram" size={18} />
             @booktabib
           </a>
+          <InstallLink label={t.install.howTo} />
           <span>{t.common.sampleNotice}</span>
         </div>
       </footer>
+      <InstallGuideMount t={t} />
     </>
   )
 }

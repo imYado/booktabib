@@ -4,7 +4,7 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
-import { type DoctorService, bookings, clinics, clinicSettings, doctors, doctorSettings, images, sessions, users } from '@/db/schema'
+import { type DoctorService, bookings, notifications, prescriptions, clinics, clinicSettings, doctors, doctorSettings, images, sessions, users } from '@/db/schema'
 import { getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { isCity, isHonorific, isSpecialty } from '@/lib/data'
@@ -163,6 +163,8 @@ export async function deleteClinic(formData: FormData) {
     await db.delete(doctorSettings).where(inArray(doctorSettings.doctorId, doctorIds))
   }
   await db.delete(bookings).where(eq(bookings.clinicId, clinic.id))
+  await db.delete(prescriptions).where(eq(prescriptions.clinicId, clinic.id))
+  await db.delete(notifications).where(eq(notifications.clinicId, clinic.id))
   await db.delete(clinicSettings).where(eq(clinicSettings.clinicId, clinic.id))
   await db.delete(clinics).where(eq(clinics.id, clinic.id)) // its doctors go with it
   if (imageIds.length) await db.delete(images).where(inArray(images.id, imageIds))
@@ -259,6 +261,7 @@ export async function deleteDoctor(formData: FormData) {
   const db = await getDb()
   await db.update(users).set({ doctorId: null }).where(eq(users.doctorId, doctor.id))
   await db.delete(bookings).where(eq(bookings.doctorId, doctor.id))
+  await db.delete(prescriptions).where(eq(prescriptions.doctorId, doctor.id))
   await db.delete(doctorSettings).where(eq(doctorSettings.doctorId, doctor.id))
   await db.delete(doctors).where(eq(doctors.id, doctor.id))
   if (doctor.imageId) await db.delete(images).where(eq(images.id, doctor.imageId))

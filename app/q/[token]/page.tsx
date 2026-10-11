@@ -3,14 +3,15 @@ import Link from 'next/link'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { InstallGuideMount } from '@/components/InstallGuideMount'
 import { getCatalog } from '@/lib/catalog'
-import { MINUTES_PER_PATIENT, whatsappNumber } from '@/lib/data'
-import { CLINIC_TIME_ZONE, formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
+import { whatsappNumber } from '@/lib/data'
+import { formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
 import { getCurrentUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { contactNumberFor, getClinicAccent } from '@/lib/settings'
-import { getBookingByLiveToken, queuePosition } from '@/lib/store'
+import { estimatedTime, getBookingByLiveToken, queuePosition } from '@/lib/store'
 
 // The patient's live queue page. Anyone holding the link can open it, so it shows only
 // the patient's name, their number, the line and how to reach the clinic: no phone
@@ -20,24 +21,6 @@ export const metadata: Metadata = {
   title: 'booktabib',
   robots: { index: false, follow: false },
   referrer: 'no-referrer',
-}
-
-function minutesNow() {
-  const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: CLINIC_TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: false })
-    .format(new Date())
-    .split(':')
-    .map(Number)
-  return h * 60 + m
-}
-
-function toMinutes(hhmm: string) {
-  const [h, m] = hhmm.split(':').map(Number)
-  return h * 60 + m
-}
-
-function toHHMM(minutes: number) {
-  const m = Math.round(minutes / 5) * 5
-  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
 export default async function LiveQueuePage({ params }: { params: Promise<{ token: string }> }) {
@@ -74,7 +57,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
   const isToday = booking.date === today
   const active = booking.status === 'pending' || booking.status === 'approved' || booking.status === 'in_progress'
   const position = booking.status === 'approved' && isToday ? await queuePosition(booking) : null
-  const estimate = position ? toHHMM(Math.max(toMinutes(booking.time), minutesNow() + position.ahead * MINUTES_PER_PATIENT)) : null
+  const estimate = position ? estimatedTime(booking, position.ahead) : null
   const { lat, lng } = clinic?.location ?? { lat: 0, lng: 0 }
   // WhatsApp goes to the doctor's own number when the clinic set one, otherwise to the clinic.
   const contact = await contactNumberFor(booking.doctorId)
@@ -169,6 +152,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
           {t.live.autoUpdate}
         </p>
       )}
+      <InstallGuideMount t={t} />
     </main>
   )
 }

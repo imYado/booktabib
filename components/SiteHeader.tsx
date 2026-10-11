@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { localDigits } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { unreadCount } from '@/lib/notifications'
+import { deliverRenewalReminders } from '@/lib/prescriptions'
 
 /**
  * The bar at the top of the site. On clinic and doctor pages it is pared down to the wordmark and one
@@ -15,6 +16,8 @@ export async function SiteHeader({ minimal = false }: { minimal?: boolean }) {
   const { locale, t } = await getI18n()
   const user = await getCurrentUser()
   const role = user?.role
+  // Prescription reminders are written when they come due, as the patient opens the site.
+  if (user) await deliverRenewalReminders(user.id)
   const unread = user ? await unreadCount(user.id) : 0
   return (
     <header className={minimal ? 'site-header site-header-minimal' : 'site-header'}>
