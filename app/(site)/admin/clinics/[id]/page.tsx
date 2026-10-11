@@ -19,6 +19,7 @@ import { cities, specialties, specialtyIds, type CityId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
 import { staffOptions } from '../../staff-options'
+import { localDigits } from '@/lib/format'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -153,7 +154,7 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
                             <span>{specialties[d.specialty][locale]}</span>
                             {d.room && (
                               <span>
-                                {t.screen.room} {d.room}
+                                {t.screen.room} {localDigits(locale, d.room)}
                               </span>
                             )}
                           </div>

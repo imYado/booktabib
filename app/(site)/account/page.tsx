@@ -11,7 +11,7 @@ import { ThemeSwitcher } from '@/components/ThemeSwitcher'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { getFavoriteIds } from '@/lib/favorites'
-import { formatDay, todayISO } from '@/lib/format'
+import { formatDay, formatTime, todayISO } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
 import { listBookings, type Booking } from '@/lib/store'
@@ -50,7 +50,7 @@ export default async function ProfilePage({ searchParams }: Props) {
               <div className="meta">
                 <span>{getClinic(b.clinicId)?.name[locale]}</span>
                 <span>
-                  {formatDay(locale, b.date)} · <span dir="ltr">{b.time}</span>
+                  {formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
                 </span>
               </div>
             </div>

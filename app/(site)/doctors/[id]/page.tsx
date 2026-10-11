@@ -6,7 +6,7 @@ import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
 import { getCatalog } from '@/lib/catalog'
 import { cities, isWorkingDay, specialties } from '@/lib/data'
-import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
+import { addDays, formatDay, formatNumber, formatTime, todayISO } from '@/lib/format'
 import { getCurrentUser } from '@/lib/auth'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
@@ -108,9 +108,9 @@ export default async function DoctorPage({ params, searchParams }: Props) {
               {slots.length ? (
                 <div className="choices">
                   {slots.map((s, i) => (
-                    <label key={s} className="choice" dir="ltr">
+                    <label key={s} className="choice">
                       <input type="radio" name="time" value={s} required defaultChecked={i === 0} />
-                      {s}
+                      {formatTime(locale, s)}
                     </label>
                   ))}
                 </div>

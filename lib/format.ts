@@ -2,10 +2,11 @@ import type { Locale } from './i18n'
 
 export const CLINIC_TIME_ZONE = 'Asia/Baghdad'
 
+// Arabic and Kurdish use Arabic-Indic digits (٠١٢…), since many readers don't use Latin numbers.
 const intlLocale: Record<Locale, string> = {
   en: 'en-GB',
-  ar: 'ar-IQ-u-nu-latn',
-  ckb: 'ckb-IQ-u-nu-latn',
+  ar: 'ar-IQ-u-nu-arab',
+  ckb: 'ckb-IQ-u-nu-arab',
 }
 
 /** Today's date in the clinics' time zone, as YYYY-MM-DD. */
@@ -35,4 +36,21 @@ export function formatDay(locale: Locale, iso: string, opts: Intl.DateTimeFormat
 
 export function formatNumber(locale: Locale, n: number): string {
   return new Intl.NumberFormat(intlLocale[locale]).format(n)
+}
+
+/** A clinic time like "14:30" in 12-hour form: "2:30 PM", "٢:٣٠ م", "٢:٣٠ د.ن". */
+export function formatTime(locale: Locale, hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : intlLocale[locale], {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(2000, 0, 1, h, m)))
+}
+
+/** Ticket numbers, room numbers and the like, in the reader's digits. */
+export function localDigits(locale: Locale, value: number | string): string {
+  return locale === 'en' ? String(value) : String(value).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)])
 }

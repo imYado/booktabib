@@ -4,7 +4,7 @@ import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { getCatalog } from '@/lib/catalog'
 import { MINUTES_PER_PATIENT, whatsappNumber } from '@/lib/data'
-import { CLINIC_TIME_ZONE, formatDay, todayISO } from '@/lib/format'
+import { CLINIC_TIME_ZONE, formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
 import { contactNumberFor, getClinicAccent } from '@/lib/settings'
@@ -102,7 +102,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
           <>
             <p className="caption">{t.live.appointment}</p>
             <p className="live-sub">
-              {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span dir="ltr">{booking.time}</span>
+              {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span>{formatTime(locale, booking.time)}</span>
             </p>
           </>
         )}
@@ -111,12 +111,12 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
           <div className="live-stats">
             <div>
               <div className="caption">{t.live.ticket}</div>
-              <div className="live-number">{booking.ticket}</div>
+              <div className="live-number">{localDigits(locale, booking.ticket ?? '')}</div>
             </div>
             {position && (
               <div>
                 <div className="caption">{t.live.nowServing}</div>
-                <div className="live-number">{position.servingTicket ?? '–'}</div>
+                <div className="live-number">{position.servingTicket ? localDigits(locale, position.servingTicket) : '–'}</div>
               </div>
             )}
           </div>
@@ -128,7 +128,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
               {t.live.ahead(position.ahead)}
             </p>
             <p style={{ margin: 0 }}>
-              {t.live.estimate}: <strong dir="ltr">{estimate}</strong>
+              {t.live.estimate}: <strong>{formatTime(locale, estimate)}</strong>
             </p>
             <p className="caption" style={{ margin: 0 }}>
               {t.live.estimateNote}
