@@ -64,6 +64,13 @@
       "when": 1791640418648,
       "tag": "0008_clinic_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791720913785,
+      "tag": "0009_fee_thousands",
+      "breakpoints": true
     }
   ]
 }

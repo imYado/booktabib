@@ -110,7 +110,7 @@ export const doctors = pgTable(
     imageId: text('image_id'),
     sort: integer('sort').notNull().default(0),
   },
-  (t) => [index('doctors_clinic_idx').on(t.clinicId)],
+  (t) => [index('doctors_clinic_idx').on(t.clinicId), check('doctors_fee_thousands', sql`${t.fee} >= 0 and ${t.fee} % 1000 = 0`)],
 )
 
 // Uploaded clinic and doctor photos, kept in the database so no extra storage service is needed.

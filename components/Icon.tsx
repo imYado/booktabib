@@ -1,4 +1,4 @@
-type IconName = 'search' | 'pin' | 'arrow' | 'clock' | 'star' | 'calendar' | 'phone' | 'image' | 'check' | 'x' | 'user' | 'grip' | 'plus' | 'edit' | 'trash' | 'undo' | 'heart'
+type IconName = 'search' | 'pin' | 'arrow' | 'clock' | 'star' | 'calendar' | 'phone' | 'image' | 'check' | 'x' | 'user' | 'grip' | 'plus' | 'edit' | 'trash' | 'undo' | 'heart' | 'instagram'
 
 const paths: Record<IconName, React.ReactNode> = {
   grip: (
@@ -12,7 +12,14 @@ const paths: Record<IconName, React.ReactNode> = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
-  heart: <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20Z" />,
+  heart: <path d="M12 20.6c-.35 0-.7-.12-.98-.35C7.9 17.7 3 13.9 3 9.2 3 6.3 5.2 4 8 4c1.6 0 3 .8 4 2.1C13 4.8 14.4 4 16 4c2.8 0 5 2.3 5 5.2 0 4.7-4.9 8.5-8.02 11.05-.28.23-.63.35-.98.35Z" />,
+  instagram: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.2" cy="6.8" r="0.6" />
+    </>
+  ),
   edit: <path d="M4 20h4L19 9l-4-4L4 16v4ZM14 6l4 4" />,
   trash: <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" />,
   undo: <path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" />,

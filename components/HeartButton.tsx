@@ -8,11 +8,8 @@ type Labels = { like: string; unlike: string; loginToLike: string }
 
 function Heart({ filled }: { filled: boolean }) {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" strokeWidth="1.8" strokeLinejoin="round">
-      <path
-        d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20Z"
-        className={filled ? 'heart-shape is-filled' : 'heart-shape'}
-      />
+    <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 20.6c-.35 0-.7-.12-.98-.35C7.9 17.7 3 13.9 3 9.2 3 6.3 5.2 4 8 4c1.6 0 3 .8 4 2.1C13 4.8 14.4 4 16 4c2.8 0 5 2.3 5 5.2 0 4.7-4.9 8.5-8.02 11.05-.28.23-.63.35-.98.35Z" className={filled ? 'heart-shape is-filled' : 'heart-shape'} />
     </svg>
   )
 }
