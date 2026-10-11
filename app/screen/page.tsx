@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { getCatalog } from '@/lib/catalog'
-import { formatDay, todayISO } from '@/lib/format'
+import { formatDay, localDigits, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
@@ -45,16 +45,16 @@ export default async function ScreenPage({ searchParams }: { searchParams: Promi
         {current ? (
           <>
             <p className="screen-label">{t.screen.nowServing}</p>
-            <div className="screen-ticket">{current.ticket}</div>
+            <div className="screen-ticket">{localDigits(locale, current.ticket ?? '')}</div>
             <h1 className="screen-name">{current.patientName}</h1>
             {doctor && (
               <p className="screen-room">
-                {t.screen.goTo} {t.screen.room} {doctor.room} · {doctor.name[locale]}
+                {t.screen.goTo} {t.screen.room} {localDigits(locale, doctor.room)} · {doctor.name[locale]}
               </p>
             )}
             {others.length > 0 && (
               <p className="screen-label" style={{ fontSize: 'clamp(1.25rem, 2.4vw, 3rem)' }}>
-                {others.map((b) => `${b.ticket} · ${b.patientName} · ${t.screen.room} ${getDoctor(b.doctorId)?.room}`).join('   |   ')}
+                {others.map((b) => `${localDigits(locale, b.ticket ?? '')} · ${b.patientName} · ${t.screen.room} ${localDigits(locale, getDoctor(b.doctorId)?.room ?? '')}`).join('   |   ')}
               </p>
             )}
           </>
@@ -71,7 +71,7 @@ export default async function ScreenPage({ searchParams }: { searchParams: Promi
         </span>
         {next.map((b) => (
           <span key={b.id}>
-            <strong>{b.ticket}</strong> {b.patientName}
+            <strong>{localDigits(locale, b.ticket ?? '')}</strong> {b.patientName}
           </span>
         ))}
       </footer>

@@ -10,7 +10,7 @@ import { AddPatientForm, EditToggle, PatientEditor, PatientRow } from '@/compone
 import { ClinicSettings } from '@/components/ClinicSettings'
 import { getCatalog } from '@/lib/catalog'
 import { whatsappNumber } from '@/lib/data'
-import { formatDay, todayISO } from '@/lib/format'
+import { formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
 import { canManageClinic, requireUser } from '@/lib/auth'
 import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
 import { getI18n } from '@/lib/locale'
@@ -97,7 +97,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
             <div className="row" style={{ gap: '8px 32px' }}>
               {serving.map((b) => (
                 <span key={b.id} style={{ fontSize: '1.25rem', fontWeight: 500 }}>
-                  <strong className="ticket">{b.ticket}</strong> {b.patientName}
+                  <strong className="ticket">{localDigits(locale, b.ticket ?? '')}</strong> {b.patientName}
                   <span className="caption"> · {getDoctor(b.doctorId)?.name[locale]}</span>
                 </span>
               ))}
@@ -124,7 +124,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                     items={waiting.map((b) => ({
                       id: b.id,
                       content: (
-                        <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} t={t}>
+                        <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
                           <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />
                           {linkButtons(b)}
                           <EditToggle id={b.id} label={t.assistant.edit} />
@@ -145,7 +145,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                 <ul className="list">
                   {seen.map((b) => (
                     <li key={b.id} className="queue-item">
-                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} t={t}>
+                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
                         {b.status === 'in_progress' && <StatusButton id={b.id} status="done" label={t.assistant.done} primary />}
                         {b.status === 'in_progress' && linkButtons(b)}
                       </PatientRow>
@@ -161,7 +161,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                 <ul className="list">
                   {removed.map((b) => (
                     <li key={b.id} className="queue-item is-removed">
-                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} t={t}>
+                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
                         <StatusButton id={b.id} status="approved" label={t.assistant.addBack} />
                       </PatientRow>
                     </li>
@@ -182,9 +182,10 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                       <div className="meta">
                         <span>
                           <Icon name="calendar" size={14} />
-                          {formatDay(locale, b.date)} · <span dir="ltr">{b.time}</span>
+                          {formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
                         </span>
                         <span>{getDoctor(b.doctorId)?.name[locale]}</span>
+                        {b.service && <span>{b.service.name[locale]}</span>}
                         <span dir="ltr">{b.phone}</span>
                       </div>
                       {b.note && <p className="caption" style={{ margin: '6px 0 0' }}>{b.note}</p>}

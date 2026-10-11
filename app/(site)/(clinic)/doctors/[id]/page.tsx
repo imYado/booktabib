@@ -6,7 +6,7 @@ import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
 import { getCatalog } from '@/lib/catalog'
 import { cities, isWorkingDay, specialties } from '@/lib/data'
-import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
+import { addDays, formatDay, formatNumber, formatTime, todayISO } from '@/lib/format'
 import { getCurrentUser } from '@/lib/auth'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
@@ -77,10 +77,23 @@ export default async function DoctorPage({ params, searchParams }: Props) {
               <Link href={`/clinics/${clinic.id}`}>{clinic.name[locale]}</Link>
               <span className="caption"> · {cities[clinic.city][locale]}</span>
             </dd>
-            <dt>{t.doctorProfile.fee}</dt>
-            <dd>
-              {formatNumber(locale, doctor.fee)} {t.common.iqd}
-            </dd>
+            {doctor.services.length > 0 && (
+              <>
+                <dt>{t.doctorProfile.services}</dt>
+                <dd>
+                  <ul className="price-list">
+                    {doctor.services.map((sv, i) => (
+                      <li key={i}>
+                        <span>{sv.name[locale]}</span>
+                        <span className="price">
+                          {formatNumber(locale, sv.fee)} {t.common.iqd}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </>
+            )}
             <dt>{t.doctorProfile.experienceLabel}</dt>
             <dd>{t.doctorProfile.experience(doctor.years)}</dd>
           </dl>
@@ -103,14 +116,31 @@ export default async function DoctorPage({ params, searchParams }: Props) {
           <form action={requestBooking} className="stack" style={{ '--stack': '20px', marginTop: 20 } as React.CSSProperties}>
             <input type="hidden" name="doctorId" value={doctor.id} />
             <input type="hidden" name="date" value={selected} />
+            {doctor.services.length > 1 && (
+              <fieldset className="field">
+                <legend style={{ marginBottom: 8 }}>{t.doctorProfile.service}</legend>
+                <div className="service-choices">
+                  {doctor.services.map((sv, i) => (
+                    <label key={i} className="choice service-choice">
+                      <input type="radio" name="service" value={i} required defaultChecked={i === 0} />
+                      <span>{sv.name[locale]}</span>
+                      <span className="price">
+                        {formatNumber(locale, sv.fee)} {t.common.iqd}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            {doctor.services.length === 1 && <input type="hidden" name="service" value="0" />}
             <fieldset className="field">
               <legend style={{ marginBottom: 8 }}>{t.doctorProfile.time}</legend>
               {slots.length ? (
                 <div className="choices">
                   {slots.map((s, i) => (
-                    <label key={s} className="choice" dir="ltr">
+                    <label key={s} className="choice">
                       <input type="radio" name="time" value={s} required defaultChecked={i === 0} />
-                      {s}
+                      {formatTime(locale, s)}
                     </label>
                   ))}
                 </div>

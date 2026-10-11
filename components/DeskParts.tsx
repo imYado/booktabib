@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { addPatient, editPatient } from '@/app/actions'
 import type { Doctor } from '@/lib/data'
+import { formatTime, localDigits } from '@/lib/format'
 import type { Dictionary, Locale } from '@/lib/i18n'
 import type { Booking } from '@/lib/store'
 import { Icon } from './Icon'
@@ -10,23 +11,26 @@ import { StatusPill } from './StatusPill'
 export function PatientRow({
   b,
   doctorName,
+  locale,
   t,
   children,
 }: {
   b: Booking
   doctorName?: string
+  locale: Locale
   t: Dictionary
   children?: ReactNode
 }) {
   return (
     <>
-      <span className="ticket">{b.ticket}</span>
+      <span className="ticket">{localDigits(locale, b.ticket ?? '')}</span>
       <div>
         <div style={{ fontWeight: 500 }}>{b.patientName}</div>
         <div className="meta">
-          <span dir="ltr">{b.time}</span>
+          <span>{formatTime(locale, b.time)}</span>
           {b.walkIn && <span>{t.assistant.walkIn}</span>}
           {doctorName && <span>{doctorName}</span>}
+          {b.service && <span>{b.service.name[locale]}</span>}
           {b.phone && <span dir="ltr">{b.phone}</span>}
           <StatusPill status={b.status} t={t} />
         </div>

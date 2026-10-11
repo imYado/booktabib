@@ -119,12 +119,15 @@ export type Doctor = {
   specialty: SpecialtyId
   title: Localized
   years: number
+  /** The lowest service price. */
   fee: number
+  /** Services the doctor offers, each with its own price; names fill empty languages from another. */
+  services: { name: Localized; fee: number }[]
   room: string
   bio: Localized
   imageId: string | null
   sort: number
-  raw: { name: Localized; title: Localized; bio: Localized; honorificOther: Localized }
+  raw: { name: Localized; title: Localized; bio: Localized; honorificOther: Localized; services: { name: Localized; fee: number }[] }
 }
 
 const order = ['en', 'ar', 'ckb'] as const

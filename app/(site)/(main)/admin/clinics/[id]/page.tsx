@@ -8,6 +8,7 @@ import { AdminTabs, FormNotice, LocalizedField, PhotoField } from '@/components/
 import { Avatar } from '@/components/Avatar'
 import { AccentPicker, WhatsappField } from '@/components/ClinicSettings'
 import { ConfirmButton } from '@/components/ConfirmButton'
+import { ServicesEditor } from '@/components/ServicesEditor'
 import { HonorificPicker } from '@/components/HonorificPicker'
 import { Icon } from '@/components/Icon'
 import { getDb } from '@/db'
@@ -19,6 +20,7 @@ import { cities, specialties, specialtyIds, type CityId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
 import { staffOptions } from '../../staff-options'
+import { localDigits } from '@/lib/format'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -56,6 +58,15 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
   const labels = { name: t.auth.name, email: t.auth.email }
   const openDoctor = query.added ?? query.saved
   const honorificLabels = { ...t.edit, langs: t.edit.langs }
+  const serviceLabels = {
+    title: t.edit.services,
+    hint: t.edit.servicesHint,
+    name: t.edit.serviceName,
+    fee: t.edit.fee,
+    add: t.edit.addService,
+    remove: t.edit.removeService,
+    langs: t.edit.langs,
+  }
   const stack = (gap: number) => ({ '--stack': `${gap}px` }) as React.CSSProperties
 
   return (
@@ -153,7 +164,7 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
                             <span>{specialties[d.specialty][locale]}</span>
                             {d.room && (
                               <span>
-                                {t.screen.room} {d.room}
+                                {t.screen.room} {localDigits(locale, d.room)}
                               </span>
                             )}
                           </div>
@@ -187,14 +198,11 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
                             <input id={`${d.id}-years`} name="years" type="number" min={0} max={80} className="input" defaultValue={d.years} dir="ltr" />
                           </div>
                           <div className="field">
-                            <label htmlFor={`${d.id}-fee`}>{t.edit.fee}</label>
-                            <input id={`${d.id}-fee`} name="fee" type="number" min={0} step={1000} className="input" defaultValue={d.fee} dir="ltr" />
-                          </div>
-                          <div className="field">
                             <label htmlFor={`${d.id}-room`}>{t.edit.room}</label>
                             <input id={`${d.id}-room`} name="room" className="input" defaultValue={d.room} maxLength={20} dir="ltr" />
                           </div>
                         </div>
+                        <ServicesEditor prefix={d.id} services={d.raw.services} labels={serviceLabels} />
                         <PhotoField imageId={d.imageId} prefix={d.id} round t={t} />
                         <div>
                           <button type="submit" className="btn btn-sm">

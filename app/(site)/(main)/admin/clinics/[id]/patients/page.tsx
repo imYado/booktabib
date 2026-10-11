@@ -12,7 +12,7 @@ import { getDb } from '@/db'
 import { bookings } from '@/db/schema'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { formatDay } from '@/lib/format'
+import { formatDay, formatTime, localDigits } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }
@@ -58,13 +58,13 @@ export default async function ClinicPatientsPage({ params, searchParams }: Props
                 <details className="editor">
                   <summary className="row between">
                     <div className="row" style={{ gap: 16 }}>
-                      <strong className="ticket">{b.ticket ?? '–'}</strong>
+                      <strong className="ticket">{b.ticket ? localDigits(locale, b.ticket) : '–'}</strong>
                       <div>
                         <div style={{ fontWeight: 500 }}>{b.patientName}</div>
                         <div className="meta">
                           <span>
                             <Icon name="calendar" size={14} />
-                            {formatDay(locale, b.date)} · <span dir="ltr">{b.time}</span>
+                            {formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
                           </span>
                           <span>{getDoctor(b.doctorId)?.name[locale]}</span>
                           <span dir="ltr">{b.phone}</span>

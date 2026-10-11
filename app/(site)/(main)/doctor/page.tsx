@@ -6,7 +6,7 @@ import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
 import { WeekChart } from '@/components/WeekChart'
 import { getCatalog } from '@/lib/catalog'
-import { addDays, formatDay, formatNumber, todayISO } from '@/lib/format'
+import { addDays, formatDay, formatNumber, formatTime, localDigits, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { getDoctorWhatsapps } from '@/lib/settings'
@@ -57,7 +57,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
               </p>
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', margin: 0 }}>{doctor.name[locale]}</h1>
               <p className="caption" style={{ margin: 0 }}>
-                {clinic.name[locale]} · {t.screen.room} {doctor.room}
+                {clinic.name[locale]} · {t.screen.room} {localDigits(locale, doctor.room)}
               </p>
             </div>
           </div>
@@ -91,10 +91,11 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                     <div>
                       <div className="row" style={{ gap: 16 }}>
                         <span className="ticket" style={{ fontSize: '2rem' }}>
-                          {current.ticket}
+                          {localDigits(locale, current.ticket ?? '')}
                         </span>
                         <span style={{ fontSize: '1.5rem', fontWeight: 500 }}>{current.patientName}</span>
                       </div>
+                      {current.service && <p style={{ margin: '4px 0 0' }}>{current.service.name[locale]}</p>}
                       {current.note && <p className="caption" style={{ margin: '8px 0 0' }}>{current.note}</p>}
                     </div>
                     <StatusButton id={current.id} status="done" label={t.assistant.done} primary />
@@ -121,11 +122,12 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
               <ul className="list">
                 {todays.map((b) => (
                   <li key={b.id} className="queue-item">
-                    <span className="ticket">{b.ticket}</span>
+                    <span className="ticket">{localDigits(locale, b.ticket ?? '')}</span>
                     <div>
                       <div style={{ fontWeight: 500 }}>{b.patientName}</div>
                       <div className="meta">
-                        <span dir="ltr">{b.time}</span>
+                        <span>{formatTime(locale, b.time)}</span>
+                        {b.service && <span>{b.service.name[locale]}</span>}
                       </div>
                     </div>
                     <div className="actions">

@@ -54,6 +54,8 @@ export const bookings = pgTable(
     calledAt: bigint('called_at', { mode: 'number' }),
     // Added at the desk rather than booked into a slot, so it doesn't hold the slot.
     walkIn: boolean('walk_in').notNull().default(false),
+    // The service the patient picked, copied from the doctor's list at booking time so later price changes don't alter it.
+    service: jsonb('service').$type<BookedService>(),
     // Place in the day's line after an assistant reorders it, in minutes since midnight like the
     // slot time. Empty means the booking's own time.
     position: doublePrecision('position'),
@@ -104,7 +106,10 @@ export const doctors = pgTable(
     specialty: text('specialty').notNull(),
     title: jsonb('title').$type<Localized>().notNull(),
     years: integer('years').notNull().default(0),
+    // The lowest of the service prices below, kept for sorting and older code.
     fee: integer('fee').notNull().default(0),
+    // What the doctor offers and what each costs, in whole thousands of IQD.
+    services: jsonb('services').$type<DoctorService[]>().notNull().default([]),
     room: text('room').notNull().default(''),
     bio: jsonb('bio').$type<Localized>().notNull(),
     imageId: text('image_id'),
@@ -171,6 +176,29 @@ export const doctorSettings = pgTable('doctor_settings', {
   // Where the patient's live link sends WhatsApp messages. Empty means the clinic number.
   whatsapp: text('whatsapp').notNull().default(''),
 })
+
+// Messages to a patient's account when the clinic acts on their booking. The text is written in the
+// reader's language when shown, from the kind and the booking.
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    bookingId: text('booking_id').references(() => bookings.id, { onDelete: 'cascade' }),
+    clinicId: text('clinic_id').notNull(),
+    // 'approved', 'turn', 'cancelled' or 'done'
+    kind: text('kind').notNull(),
+    ticket: integer('ticket'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp('read_at', { withTimezone: true }),
+  },
+  (t) => [index('notifications_user_idx').on(t.userId, t.createdAt)],
+)
+
+export type DoctorService = { name: Localized; fee: number }
+export type BookedService = DoctorService
 
 export type User = typeof users.$inferSelect
 export type Booking = typeof bookings.$inferSelect

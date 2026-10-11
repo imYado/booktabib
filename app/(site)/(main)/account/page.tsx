@@ -11,7 +11,8 @@ import { ThemeSwitcher } from '@/components/ThemeSwitcher'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { getFavoriteIds } from '@/lib/favorites'
-import { formatDay, todayISO } from '@/lib/format'
+import { formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
+import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
 import { listBookings, type Booking } from '@/lib/store'
@@ -22,17 +23,18 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.profile.title, robots: { index: false } }
 }
 
-type Props = { searchParams: Promise<{ saved?: string; error?: string }> }
+type Props = { searchParams: Promise<{ saved?: string; error?: string; claimed?: string }> }
 
 export default async function ProfilePage({ searchParams }: Props) {
   const { clinics, doctors, getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await requireUser(['patient', 'assistant', 'doctor', 'admin'], '/account')
-  const { saved, error } = await searchParams
+  const { saved, error, claimed } = await searchParams
   const today = todayISO()
   const [all, favoriteIds, accents] = await Promise.all([listBookings({ userId: user.id }), getFavoriteIds(), getClinicAccents()])
-  const upcoming = all.filter((b) => b.date >= today && b.status !== 'done')
-  const past = all.filter((b) => !upcoming.includes(b)).reverse()
+  // Ongoing: still waiting, confirmed or being seen, today or later. Everything else is history.
+  const ongoing = all.filter((b) => b.date >= today && (b.status === 'pending' || b.status === 'approved' || b.status === 'in_progress'))
+  const past = all.filter((b) => !ongoing.includes(b)).reverse()
   const favoriteClinics = favoriteIds.map((id) => clinics.find((c) => c.id === id)).filter((c) => !!c)
   const themeCookie = (await cookies()).get(THEME_COOKIE)?.value
   const theme = isTheme(themeCookie) ? themeCookie : 'system'
@@ -50,7 +52,7 @@ export default async function ProfilePage({ searchParams }: Props) {
               <div className="meta">
                 <span>{getClinic(b.clinicId)?.name[locale]}</span>
                 <span>
-                  {formatDay(locale, b.date)} · <span dir="ltr">{b.time}</span>
+                  {formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
                 </span>
               </div>
             </div>
@@ -108,6 +110,62 @@ export default async function ProfilePage({ searchParams }: Props) {
               {p.logout}
             </button>
           </form>
+        </div>
+
+        <div id="ongoing">
+          <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{t.account.ongoing}</h2>
+          {claimed && (
+            <p className="saved-note" role="status" style={{ marginTop: 12 }}>
+              <Icon name="check" size={16} />
+              {t.account.claimed}
+            </p>
+          )}
+          {error === 'claim' && (
+            <p className="notice" role="alert" style={{ marginTop: 12 }}>
+              {t.account.claimMismatch}
+            </p>
+          )}
+          {ongoing.length ? (
+            <>
+              <p className="caption" style={{ margin: '4px 0 16px' }}>
+                {t.account.ongoingLead}
+              </p>
+              <ul className="ongoing">
+                {ongoing.map((b) => (
+                  <li key={b.id} className="ongoing-item" style={accentStyle(accents[b.clinicId])}>
+                    <Link href={`/bookings/${b.id}`} className="ongoing-main">
+                      <span className="ongoing-clinic">{getClinic(b.clinicId)?.name[locale]}</span>
+                      <span className="meta">
+                        <span>{getDoctor(b.doctorId)?.name[locale]}</span>
+                        <span>
+                          {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
+                        </span>
+                        {b.ticket !== null && (
+                          <span>
+                            {t.live.ticket} {localDigits(locale, b.ticket)}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                    <div className="row" style={{ gap: 8 }}>
+                      <StatusPill status={b.status} t={t} />
+                      <Link href={`/q/${b.liveToken}`} className="btn btn-sm">
+                        {t.account.openLive}
+                        <Icon name="arrow" size={14} />
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div className="card card-paper row between" style={{ marginTop: 16 }}>
+              <p style={{ margin: 0 }}>{t.account.noOngoing}</p>
+              <Link href="/clinics" className="btn btn-sm">
+                {t.account.find}
+              </Link>
+            </div>
+          )}
         </div>
 
         <form action={updateProfile} id="details" className="card stack" style={stack(20)}>
@@ -187,23 +245,10 @@ export default async function ProfilePage({ searchParams }: Props) {
 
         <div id="bookings">
           <h2 style={{ fontSize: '1.5rem' }}>{p.bookings}</h2>
-          {all.length === 0 ? (
+          {past.length === 0 ? (
             <p className="caption">{t.account.empty}</p>
           ) : (
-            <>
-              {upcoming.length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <h3 className="list-title">{t.account.upcoming}</h3>
-                  {list(upcoming)}
-                </div>
-              )}
-              {past.length > 0 && (
-                <div style={{ marginTop: 32 }}>
-                  <h3 className="list-title">{t.account.past}</h3>
-                  {list(past)}
-                </div>
-              )}
-            </>
+            <div style={{ marginTop: 16 }}>{list(past)}</div>
           )}
         </div>
 

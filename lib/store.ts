@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, desc, eq, gte, inArray, ne, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { bookings, type Booking, type BookingStatus } from '@/db/schema'
+import { bookings, notifications, type BookedService, type Booking, type BookingStatus } from '@/db/schema'
 import { getCatalog } from './catalog'
 import { dailySlots, isWorkingDay } from './data'
 import { CLINIC_TIME_ZONE, todayISO } from './format'
@@ -89,6 +89,7 @@ export async function createBooking(input: {
   patientName: string
   phone: string
   note: string
+  service?: BookedService | null
   userId: string | null
 }): Promise<Booking> {
   const doctor = (await getCatalog()).getDoctor(input.doctorId)
@@ -127,7 +128,16 @@ async function assignTicket(booking: Booking) {
   throw new Error('Could not assign a ticket number')
 }
 
-export async function setStatus(booking: Booking, status: BookingStatus) {
+/** Tells the patient's account what the clinic did with their booking. */
+async function notify(booking: Pick<Booking, 'id' | 'userId' | 'clinicId'>, status: BookingStatus, ticket: number | null) {
+  const kind = { approved: 'approved', in_progress: 'turn', cancelled: 'cancelled', done: 'done', pending: null }[status]
+  if (!booking.userId || !kind) return
+  const db = await getDb()
+  await db.insert(notifications).values({ id: randomId(16), userId: booking.userId, bookingId: booking.id, clinicId: booking.clinicId, kind, ticket })
+}
+
+/** Changes a booking's status. `actorId` is who did it, so patients aren't told about their own changes. */
+export async function setStatus(booking: Booking, status: BookingStatus, actorId?: string) {
   const db = await getDb()
   if (booking.status === 'cancelled' && status !== 'cancelled' && !booking.walkIn) {
     // Bringing a removed patient back: if someone else has their slot by now, they come back as a walk-in.
@@ -141,15 +151,19 @@ export async function setStatus(booking: Booking, status: BookingStatus) {
   if ((status === 'approved' || status === 'in_progress') && booking.ticket === null) await assignTicket(booking)
   if (status === 'in_progress') {
     // A doctor sees one patient at a time: whoever was with them is finished.
-    await db
+    const finished = await db
       .update(bookings)
       .set({ status: 'done' })
       .where(and(eq(bookings.doctorId, booking.doctorId), eq(bookings.status, 'in_progress'), ne(bookings.id, booking.id)))
+      .returning()
+    for (const b of finished) await notify(b, 'done', b.ticket)
   }
-  await db
+  const [row] = await db
     .update(bookings)
     .set({ status, ...(status === 'in_progress' ? { calledAt: Date.now() } : {}) })
     .where(eq(bookings.id, booking.id))
+    .returning()
+  if (row && row.status !== booking.status && booking.userId !== actorId) await notify(row, status, row.ticket)
 }
 
 /** The patients currently with a doctor at a clinic today, most recently called first. */
@@ -214,4 +228,30 @@ export async function addWalkIn(input: { doctorId: string; patientName: string; 
 export async function updateContact(booking: Booking, patientName: string, phone: string) {
   const db = await getDb()
   await db.update(bookings).set({ patientName, phone }).where(eq(bookings.id, booking.id))
+}
+
+/** The last 9 digits of a phone number, reading Arabic-Indic digits too, so "0750 123 4567" and "+964 750 123 4567" match. */
+function phoneKey(phone: string) {
+  const ascii = phone.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+  return ascii.replace(/\D/g, '').slice(-9)
+}
+
+/**
+ * Adds a booking made without an account to the signed-in user's account, from its live link. Only a
+ * booking nobody owns yet, and only when it was made with the account's phone number: a forwarded link
+ * alone is not enough to see the booking's phone number and note.
+ */
+export async function claimBooking(token: string, user: { id: string; phone: string }): Promise<'claimed' | 'mismatch' | 'none'> {
+  const booking = await getBookingByLiveToken(token)
+  if (!booking) return 'none'
+  if (booking.userId === user.id) return 'claimed'
+  const key = phoneKey(booking.phone)
+  if (booking.userId || key.length < 7 || key !== phoneKey(user.phone)) return 'mismatch'
+  const db = await getDb()
+  const [row] = await db
+    .update(bookings)
+    .set({ userId: user.id })
+    .where(and(eq(bookings.id, booking.id), sql`${bookings.userId} is null`))
+    .returning({ id: bookings.id })
+  return row ? 'claimed' : 'mismatch'
 }
