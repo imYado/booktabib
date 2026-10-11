@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { getCurrentUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
@@ -33,6 +34,10 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <span>
             <strong lang="en">{t.brand}</strong> · {t.tagline}
           </span>
+          <a href="https://www.instagram.com/booktabib/" target="_blank" rel="noopener noreferrer" className="footer-social" dir="ltr">
+            <Icon name="instagram" size={18} />
+            @booktabib
+          </a>
           <span>{t.common.sampleNotice}</span>
         </div>
       </footer>

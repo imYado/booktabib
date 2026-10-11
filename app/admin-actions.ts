@@ -224,7 +224,8 @@ export async function updateDoctor(formData: FormData) {
       title: localized(formData, 'title', 200),
       bio: localized(formData, 'bio', 1500),
       years: Math.round(num(formData, 'years', 0, 80)),
-      fee: Math.round(num(formData, 'fee', 0, 100_000_000)),
+      // Prices are whole thousands of Iraqi dinars.
+      fee: Math.round(num(formData, 'fee', 0, 100_000_000) / 1000) * 1000,
       room: text(formData, 'room', 20),
       ...(imageId !== undefined ? { imageId } : {}),
     })
