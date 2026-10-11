@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
@@ -6,6 +7,7 @@ import { getCatalog } from '@/lib/catalog'
 import { MINUTES_PER_PATIENT, whatsappNumber } from '@/lib/data'
 import { CLINIC_TIME_ZONE, formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
+import { getCurrentUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { contactNumberFor, getClinicAccent } from '@/lib/settings'
 import { getBookingByLiveToken, queuePosition } from '@/lib/store'
@@ -41,13 +43,16 @@ function toHHMM(minutes: number) {
 export default async function LiveQueuePage({ params }: { params: Promise<{ token: string }> }) {
   const { getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
-  const booking = await getBookingByLiveToken((await params).token)
+  const token = (await params).token
+  const [booking, user] = await Promise.all([getBookingByLiveToken(token), getCurrentUser()])
+  // Signed out, the wordmark leads to log in, and the booking is added to the account afterwards.
+  const brandHref = user ? '/account' : booking ? `/login?claim=${booking.liveToken}` : '/login'
 
   const header = (
     <header className="live-top">
-      <span className="brand" lang="en">
+      <Link href={brandHref} className="brand" lang="en">
         booktabib
-      </span>
+      </Link>
       <LanguageSwitcher locale={locale} label={t.common.switchTo} />
     </header>
   )

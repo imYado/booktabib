@@ -8,21 +8,26 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.auth.registerTitle }
 }
 
-type Props = { searchParams: Promise<{ next?: string; error?: string; setup?: string }> }
+type Props = { searchParams: Promise<{ next?: string; claim?: string; error?: string; setup?: string }> }
 
 export default async function RegisterPage({ searchParams }: Props) {
   const { t } = await getI18n()
-  const { next = '', error, setup } = await searchParams
+  const { next = '', claim: claimParam = '', error, setup } = await searchParams
   const messages: Record<string, string> = { exists: t.auth.exists, weak: t.auth.weak, missing: t.auth.missing, reserved: t.auth.reserved, locked: t.auth.locked }
   const message = error ? messages[error] : null
+
+  // From a live link: the booking is added to the account after logging in.
+  const claim = /^[0-9a-f]{64}$/.test(claimParam) ? claimParam : ''
+  const carry = new URLSearchParams({ ...(next ? { next } : {}), ...(claim ? { claim } : {}) }).toString()
 
   return (
     <section className="section">
       <div className="container" style={{ maxWidth: 520 }}>
         <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)' }}>{t.auth.registerTitle}</h1>
-        <p className="lead">{t.auth.registerLead}</p>
+        <p className="lead">{claim ? t.auth.claimLead : t.auth.registerLead}</p>
         <form action={register} className="stack" style={{ '--stack': '20px', marginTop: 32 } as React.CSSProperties}>
           <input type="hidden" name="next" value={next} />
+          {claim && <input type="hidden" name="claim" value={claim} />}
           <div className="field">
             <label htmlFor="name">{t.auth.name}</label>
             <input id="name" name="name" className="input" required maxLength={80} autoComplete="name" />
@@ -66,7 +71,7 @@ export default async function RegisterPage({ searchParams }: Props) {
         </form>
         <hr className="rule" style={{ margin: '40px 0 24px' }} />
         <p>
-          {t.auth.haveAccount} <Link href={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`}>{t.auth.toLogin}</Link>
+          {t.auth.haveAccount} <Link href={`/login${carry ? `?${carry}` : ''}`}>{t.auth.toLogin}</Link>
         </p>
       </div>
     </section>

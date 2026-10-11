@@ -4,7 +4,7 @@ import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
 import { canUpdateBooking, getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { formatDay, formatTime, localDigits } from '@/lib/format'
+import { formatDay, formatNumber, formatTime, localDigits } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { getBooking } from '@/lib/store'
 
@@ -76,6 +76,14 @@ export default async function BookingPage({ params }: Props) {
             </dd>
             <dt>{t.booking.clinic}</dt>
             <dd>{clinic.name[locale]}</dd>
+            {booking.service && (
+              <>
+                <dt>{t.booking.service}</dt>
+                <dd>
+                  {booking.service.name[locale]} · {formatNumber(locale, booking.service.fee)} {t.common.iqd}
+                </dd>
+              </>
+            )}
             <dt>{t.booking.when}</dt>
             <dd>
               {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span>{formatTime(locale, booking.time)}</span>

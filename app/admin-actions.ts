@@ -4,7 +4,7 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
-import { bookings, clinics, clinicSettings, doctors, doctorSettings, images, sessions, users } from '@/db/schema'
+import { type DoctorService, bookings, clinics, clinicSettings, doctors, doctorSettings, images, sessions, users } from '@/db/schema'
 import { getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { isCity, isHonorific, isSpecialty } from '@/lib/data'
@@ -198,6 +198,23 @@ export async function createDoctor(formData: FormData) {
   redirect(`${back}?added=${id}#doctor-${id}`)
 }
 
+/**
+ * The services rows of the doctor form, sent as parallel lists in the order shown. Rows without a
+ * name are dropped. Prices are whole thousands of Iraqi dinars.
+ */
+function servicesFrom(formData: FormData): DoctorService[] {
+  const names = Object.fromEntries(locales.map((l) => [l, formData.getAll(`service_name_${l}`).map((v) => String(v).trim().slice(0, 80))]))
+  const fees = formData.getAll('service_fee').map((v) => Number(v))
+  const out: DoctorService[] = []
+  for (let i = 0; i < Math.min(fees.length, 12); i++) {
+    const name = { en: names.en[i] ?? '', ar: names.ar[i] ?? '', ckb: names.ckb[i] ?? '' }
+    if (!written(name)) continue
+    const fee = Number.isFinite(fees[i]) ? Math.min(100_000_000, Math.max(0, fees[i])) : 0
+    out.push({ name, fee: Math.round(fee / 1000) * 1000 })
+  }
+  return out
+}
+
 export async function updateDoctor(formData: FormData) {
   await requireAdmin()
   const { getDoctor } = await getCatalog()
@@ -210,6 +227,7 @@ export async function updateDoctor(formData: FormData) {
   const honorific = text(formData, 'honorific')
   const honorificOther = localized(formData, 'honorificOther', 40)
 
+  const services = servicesFrom(formData)
   const imageId = await photoChange(formData, doctor.imageId)
   if (imageId === 'invalid') redirect(`${back}?error=photo#doctor-${doctor.id}`)
   const db = await getDb()
@@ -224,8 +242,8 @@ export async function updateDoctor(formData: FormData) {
       title: localized(formData, 'title', 200),
       bio: localized(formData, 'bio', 1500),
       years: Math.round(num(formData, 'years', 0, 80)),
-      // Prices are whole thousands of Iraqi dinars.
-      fee: Math.round(num(formData, 'fee', 0, 100_000_000) / 1000) * 1000,
+      services,
+      fee: services.length ? Math.min(...services.map((s) => s.fee)) : 0,
       room: text(formData, 'room', 20),
       ...(imageId !== undefined ? { imageId } : {}),
     })

@@ -30,6 +30,7 @@ export function PatientRow({
           <span>{formatTime(locale, b.time)}</span>
           {b.walkIn && <span>{t.assistant.walkIn}</span>}
           {doctorName && <span>{doctorName}</span>}
+          {b.service && <span>{b.service.name[locale]}</span>}
           {b.phone && <span dir="ltr">{b.phone}</span>}
           <StatusPill status={b.status} t={t} />
         </div>

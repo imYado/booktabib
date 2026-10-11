@@ -71,6 +71,13 @@
       "when": 1791720913785,
       "tag": "0009_fee_thousands",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791727589670,
+      "tag": "0010_services_notifications",
+      "breakpoints": true
     }
   ]
 }

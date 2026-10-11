@@ -185,6 +185,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                           {formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
                         </span>
                         <span>{getDoctor(b.doctorId)?.name[locale]}</span>
+                        {b.service && <span>{b.service.name[locale]}</span>}
                         <span dir="ltr">{b.phone}</span>
                       </div>
                       {b.note && <p className="caption" style={{ margin: '6px 0 0' }}>{b.note}</p>}

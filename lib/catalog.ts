@@ -52,6 +52,7 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
       title: fillLocalized(d.title),
       years: d.years,
       fee: d.fee,
+      services: d.services.map((s) => ({ name: fillLocalized(s.name), fee: s.fee })),
       room: d.room,
       bio: fillLocalized(d.bio),
       imageId: d.imageId,
@@ -61,6 +62,7 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
         title: localizedOrBlank(d.title),
         bio: localizedOrBlank(d.bio),
         honorificOther: localizedOrBlank(d.honorificOther),
+        services: d.services.map((s) => ({ name: localizedOrBlank(s.name), fee: s.fee })),
       },
     }
   })

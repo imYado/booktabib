@@ -16,7 +16,7 @@ import { randomId } from '@/lib/ids'
 import { hashPassword, isWeakPassword, verifyPasswordOrDummy } from '@/lib/password'
 import { clearLimit, clientIp, hit, isLimited, overLimit } from '@/lib/rate-limit'
 import { setClinicAccent, setDoctorWhatsapp } from '@/lib/settings'
-import { addWalkIn, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
+import { addWalkIn, claimBooking, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
 
 export async function setLocale(formData: FormData) {
   const locale = formData.get('locale')
@@ -43,7 +43,12 @@ export async function requestBooking(formData: FormData) {
   const note = text(formData, 'note', 300)
   const back = `/doctors/${encodeURIComponent(doctorId)}?day=${encodeURIComponent(date)}`
 
-  if (!getDoctor(doctorId)) redirect('/clinics')
+  const doctor = getDoctor(doctorId)
+  if (!doctor) redirect('/clinics')
+  // The picked service is copied onto the booking. A doctor with services must have one picked.
+  const serviceIndex = Number(text(formData, 'service', 3))
+  const service = doctor.services.length ? (doctor.services[serviceIndex] ?? null) : null
+  if (doctor.services.length && (!service || !Number.isInteger(serviceIndex))) redirect(`${back}&error=missing`)
   if (!patientName || !phone || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
     redirect(`${back}&error=missing`)
   }
@@ -57,7 +62,7 @@ export async function requestBooking(formData: FormData) {
   const user = await getCurrentUser()
   let booking: Awaited<ReturnType<typeof createBooking>>
   try {
-    booking = await createBooking({ doctorId, date, time, patientName, phone, note, userId: user?.id ?? null })
+    booking = await createBooking({ doctorId, date, time, patientName, phone, note, service, userId: user?.id ?? null })
   } catch (err) {
     if (err instanceof SlotTakenError) redirect(`${back}&error=taken`)
     throw err
@@ -75,8 +80,21 @@ export async function updateBooking(formData: FormData) {
   const status = text(formData, 'status') as BookingStatus
   const booking = await getBooking(text(formData, 'id'))
   if (!booking || !allowedStatuses.includes(status) || !canUpdateBooking(user, booking, status)) return
-  await setStatus(booking, status)
+  await setStatus(booking, status, user.id)
   revalidatePath('/', 'layout')
+}
+
+/** A live-link token passed along by the "log in to keep this booking" link, if it looks like one. */
+function claimToken(formData: FormData) {
+  const token = text(formData, 'claim', 64)
+  return /^[0-9a-f]{64}$/.test(token) ? token : ''
+}
+
+/** After logging in or signing up from a live link, adds that booking to the account and opens it there. */
+async function finishClaim(token: string, user: { id: string; phone: string }) {
+  const result = await claimBooking(token, user)
+  revalidatePath('/', 'layout')
+  redirect(result === 'claimed' ? '/account?claimed=1#ongoing' : '/account?error=claim#ongoing')
 }
 
 function landingFor(role: string) {
@@ -90,7 +108,8 @@ export async function login(formData: FormData) {
   const email = text(formData, 'email', 254).toLowerCase()
   const password = String(formData.get('password') ?? '')
   const next = text(formData, 'next', 500)
-  const q = next ? `&next=${encodeURIComponent(next)}` : ''
+  const claim = claimToken(formData)
+  const q = (next ? `&next=${encodeURIComponent(next)}` : '') + (claim ? `&claim=${claim}` : '')
   // After 5 wrong passwords an account is locked for 15 minutes, and one address can try 30 times.
   const emailKey = `login:email:${email}`
   const ipKey = `login:ip:${await clientIp()}`
@@ -105,6 +124,7 @@ export async function login(formData: FormData) {
   await startSession(user.id)
   // A temporary password from the administrator is replaced before anything else.
   if (user.mustChangePassword) redirect('/account?error=change#security')
+  if (claim) await finishClaim(claim, user)
   redirect(safeNext(next, landingFor(user.role)))
 }
 
@@ -122,7 +142,8 @@ export async function register(formData: FormData) {
   const phone = text(formData, 'phone', 30)
   const password = String(formData.get('password') ?? '')
   const next = text(formData, 'next', 500)
-  const q = next ? `&next=${encodeURIComponent(next)}` : ''
+  const claim = claimToken(formData)
+  const q = (next ? `&next=${encodeURIComponent(next)}` : '') + (claim ? `&claim=${claim}` : '')
 
   if (!name || !phone || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(`/register?error=missing${q}`)
   if (isWeakPassword(password, email)) redirect(`/register?error=weak${q}`)
@@ -149,6 +170,7 @@ export async function register(formData: FormData) {
   const id = randomId(16)
   await db.insert(users).values({ id, email, name, phone, role, passwordHash: await hashPassword(password) })
   await startSession(id)
+  if (claim) await finishClaim(claim, { id, phone })
   redirect(safeNext(next, landingFor(role)))
 }
 

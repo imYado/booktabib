@@ -95,6 +95,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                         </span>
                         <span style={{ fontSize: '1.5rem', fontWeight: 500 }}>{current.patientName}</span>
                       </div>
+                      {current.service && <p style={{ margin: '4px 0 0' }}>{current.service.name[locale]}</p>}
                       {current.note && <p className="caption" style={{ margin: '8px 0 0' }}>{current.note}</p>}
                     </div>
                     <StatusButton id={current.id} status="done" label={t.assistant.done} primary />
@@ -126,6 +127,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                       <div style={{ fontWeight: 500 }}>{b.patientName}</div>
                       <div className="meta">
                         <span>{formatTime(locale, b.time)}</span>
+                        {b.service && <span>{b.service.name[locale]}</span>}
                       </div>
                     </div>
                     <div className="actions">
