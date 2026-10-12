@@ -92,6 +92,7 @@ export async function createBooking(input: {
   note: string
   service?: BookedService | null
   userId: string | null
+  prescriptionId?: string | null
 }): Promise<Booking> {
   const doctor = (await getCatalog()).getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
@@ -154,14 +155,18 @@ export async function setStatus(booking: Booking, status: BookingStatus, actorId
     // A doctor sees one patient at a time: whoever was with them is finished.
     const finished = await db
       .update(bookings)
-      .set({ status: 'done' })
+      .set({ status: 'done', finishedAt: Date.now() })
       .where(and(eq(bookings.doctorId, booking.doctorId), eq(bookings.status, 'in_progress'), ne(bookings.id, booking.id)))
       .returning()
     for (const b of finished) await notify(b, 'done', b.ticket)
   }
   const [row] = await db
     .update(bookings)
-    .set({ status, ...(status === 'in_progress' ? { calledAt: Date.now() } : {}) })
+    .set({
+      status,
+      ...(status === 'in_progress' ? { calledAt: Date.now() } : {}),
+      finishedAt: status === 'done' ? Date.now() : null,
+    })
     .where(eq(bookings.id, booking.id))
     .returning()
   // Putting someone back in the line after a mistake isn't news to them: they were already confirmed.

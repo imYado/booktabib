@@ -15,7 +15,7 @@ import { openSlots } from '@/lib/store'
 
 type Props = {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ day?: string; error?: string }>
+  searchParams: Promise<{ day?: string; error?: string; rx?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -39,7 +39,9 @@ export default async function DoctorPage({ params, searchParams }: Props) {
   const doctor = getDoctor((await params).id)
   if (!doctor) notFound()
   const clinic = getClinic(doctor.clinicId)!
-  const { day, error } = await searchParams
+  const { day, error, rx } = await searchParams
+  // From a prescription renewal link: passed on with the booking, never shown on the page.
+  const renewal = rx && /^[A-Z2-9]{16}$/.test(rx) ? rx : ''
 
   const user = await getCurrentUser()
   const accent = await getClinicAccent(clinic.id)
@@ -107,7 +109,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
           </p>
           <nav className="choices" aria-label={t.doctorProfile.day}>
             {days.map((d) => (
-              <Link key={d} href={`?day=${d}`} scroll={false} className="choice" aria-current={d === selected ? 'true' : undefined}>
+              <Link key={d} href={`?day=${d}${renewal ? `&rx=${renewal}` : ''}`} scroll={false} className="choice" aria-current={d === selected ? 'true' : undefined}>
                 {formatDay(locale, d, { month: 'numeric' })}
               </Link>
             ))}
@@ -116,6 +118,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
           <form action={requestBooking} className="stack" style={{ '--stack': '20px', marginTop: 20 } as React.CSSProperties}>
             <input type="hidden" name="doctorId" value={doctor.id} />
             <input type="hidden" name="date" value={selected} />
+            {renewal && <input type="hidden" name="rx" value={renewal} />}
             {doctor.services.length > 1 && (
               <fieldset className="field">
                 <legend style={{ marginBottom: 8 }}>{t.doctorProfile.service}</legend>

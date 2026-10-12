@@ -52,6 +52,11 @@ export const bookings = pgTable(
     ticket: integer('ticket'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     calledAt: bigint('called_at', { mode: 'number' }),
+    // When the visit was marked done, so the doctor can see how long visits take.
+    finishedAt: bigint('finished_at', { mode: 'number' }),
+    // The prescription whose renewal link (sent on WhatsApp) the patient booked through, so a return
+    // counts even when they book without an account or from a new one.
+    prescriptionId: text('prescription_id').references(() => prescriptions.id, { onDelete: 'set null' }),
     // Added at the desk rather than booked into a slot, so it doesn't hold the slot.
     walkIn: boolean('walk_in').notNull().default(false),
     // The service the patient picked, copied from the doctor's list at booking time so later price changes don't alter it.

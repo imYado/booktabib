@@ -863,6 +863,33 @@ dl.details dd {
 .switch-panel {
   margin-top: 8px;
 }
+/* Three views fit a narrow column: labels may wrap rather than overflow. */
+.switch-option {
+  text-align: center;
+  line-height: 1.2;
+}
+@media (max-width: 480px) {
+  .switch-option {
+    padding: 0 8px;
+    font-size: 0.875rem;
+  }
+}
+.chart-lead {
+  margin: 8px 0 12px;
+}
+/* Set a prescription renewal date for the patient with the doctor, without scrolling to the renewals panel. */
+.quick-renewal {
+  gap: 8px 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.quick-renewal label {
+  font-weight: 500;
+}
+.quick-renewal .input {
+  width: auto;
+  min-width: 0;
+}
 /* The patient with the doctor right now, on top of the waiting list. */
 .list.with-doctor > li {
   margin-top: 12px;
