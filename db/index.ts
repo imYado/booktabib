@@ -35,5 +35,7 @@ async function connect(): Promise<DB> {
   await migrate(db, { migrationsFolder: 'db/migrations' })
   const { seedDemo } = await import('./seed')
   await seedDemo(db as unknown as DB)
+  const { seedTestClinic } = await import('./test-clinic')
+  await seedTestClinic(db as unknown as DB)
   return db as unknown as DB
 }

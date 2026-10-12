@@ -39,6 +39,10 @@ Locally no database setup is needed: without `DATABASE_URL` the app uses an embe
 A production database starts empty. To fill a preview database with the demo accounts and
 bookings, run `DATABASE_URL=... npm run db:seed-demo` once.
 
+Production deploys also add one test clinic, Rezan Medical Center (`db/test-clinic.ts`), with
+doctor, assistant and patient logins and two weeks of bookings. It is added once and left alone
+after that; to remove it, delete the clinic and its `rezan.*` / `lana.doctor` accounts.
+
 ## What's here
 
 Next.js (App Router) in English, Arabic and Kurdish Sorani. The language is kept in a cookie and the
