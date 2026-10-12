@@ -14,9 +14,9 @@ import { addDays, formatDay, formatTime, localDigits, todayISO } from '@/lib/for
 import { listRenewals } from '@/lib/prescriptions'
 import { RenewalsPanel } from '@/components/RenewalsPanel'
 import { canManageClinic, requireUser } from '@/lib/auth'
-import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
+import { getClinicAccent, getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
 import { getI18n } from '@/lib/locale'
-import { listBookings, type Booking } from '@/lib/store'
+import { estimateLine, listBookings, nowMinutes, type Booking } from '@/lib/store'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
@@ -35,11 +35,12 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   // An assistant tied to one doctor only sees that doctor's patients.
   const doctorId = user.role === 'assistant' ? (user.doctorId ?? undefined) : undefined
   const myDoctors = doctorsAt(clinic.id).filter((d) => !doctorId || d.id === doctorId)
-  const [pending, queue, accent, whatsapps, renewals, recent] = await Promise.all([
+  const [pending, queue, accent, whatsapps, visitMinutes, renewals, recent] = await Promise.all([
     listBookings({ clinicId: clinic.id, doctorId, status: 'pending', fromDate: today }),
     listBookings({ clinicId: clinic.id, doctorId, date: today, status: ['approved', 'in_progress', 'done', 'cancelled'] }),
     getClinicAccent(clinic.id),
     getDoctorWhatsapps(myDoctors.map((d) => d.id)),
+    getVisitMinutes(myDoctors.map((d) => d.id)),
     listRenewals(clinic.id, doctorId),
     listBookings({ clinicId: clinic.id, doctorId, fromDate: addDays(today, -90), status: ['pending', 'approved', 'in_progress', 'done'] }),
   ])
@@ -47,6 +48,13 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   const waiting = queue.filter((b) => b.status === 'approved')
   const seen = queue.filter((b) => b.status === 'in_progress' || b.status === 'done')
   const removed = queue.filter((b) => b.status === 'cancelled')
+  // When each waiting patient will likely be seen, from their doctor's line order and visit length.
+  const now = nowMinutes()
+  const estimates = new Map<string, string>()
+  for (const d of myDoctors) {
+    const line = queue.filter((b) => b.doctorId === d.id && (b.status === 'approved' || b.status === 'in_progress'))
+    for (const [id, time] of estimateLine(line, visitMinutes[d.id], now)) estimates.set(id, time)
+  }
 
   const h = await headers()
   const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}`
@@ -129,7 +137,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                     items={waiting.map((b) => ({
                       id: b.id,
                       content: (
-                        <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
+                        <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} estimate={estimates.get(b.id)} locale={locale} t={t}>
                           <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />
                           {linkButtons(b)}
                           <EditToggle id={b.id} label={t.assistant.edit} />
@@ -228,6 +236,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
           accent={accent}
           doctors={myDoctors}
           whatsapps={whatsapps}
+          visitMinutes={visitMinutes}
           canEditAccent={canManageClinic(user, clinic.id)}
           locale={locale}
           t={t}

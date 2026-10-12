@@ -11,12 +11,15 @@ import { StatusPill } from './StatusPill'
 export function PatientRow({
   b,
   doctorName,
+  estimate,
   locale,
   t,
   children,
 }: {
   b: Booking
   doctorName?: string
+  /** When they'll likely be seen (HH:MM), for patients waiting today. */
+  estimate?: string
   locale: Locale
   t: Dictionary
   children?: ReactNode
@@ -28,6 +31,11 @@ export function PatientRow({
         <div style={{ fontWeight: 500 }}>{b.patientName}</div>
         <div className="meta">
           <span>{formatTime(locale, b.time)}</span>
+          {estimate && (
+            <span className="estimate">
+              {t.assistant.estimate} {formatTime(locale, estimate)}
+            </span>
+          )}
           {b.walkIn && <span>{t.assistant.walkIn}</span>}
           {doctorName && <span>{doctorName}</span>}
           {b.service && <span>{b.service.name[locale]}</span>}
@@ -65,6 +73,12 @@ export function PatientEditor({ b, t }: { b: Booking; t: Dictionary }) {
           <label htmlFor={`phone-${b.id}`}>{t.assistant.phone}</label>
           <input id={`phone-${b.id}`} name="phone" type="tel" className="input" defaultValue={b.phone} maxLength={30} dir="ltr" />
         </div>
+        {(b.status === 'pending' || b.status === 'approved') && (
+          <div className="field">
+            <label htmlFor={`time-${b.id}`}>{t.assistant.time}</label>
+            <input id={`time-${b.id}`} name="time" type="time" step={300} className="input" defaultValue={b.time} dir="ltr" />
+          </div>
+        )}
         <button type="submit" className="btn btn-sm">
           {t.assistant.save}
         </button>
@@ -73,7 +87,7 @@ export function PatientEditor({ b, t }: { b: Booking; t: Dictionary }) {
   )
 }
 
-/** Adds a walk-in or phoned-in patient straight to the end of today's line. */
+/** Adds a walk-in or phoned-in patient to today's line: at the end, or at the time typed in. */
 export function AddPatientForm({ doctors, locale, t }: { doctors: Doctor[]; locale: Locale; t: Dictionary }) {
   return (
     <details className="add-patient">
@@ -89,6 +103,13 @@ export function AddPatientForm({ doctors, locale, t }: { doctors: Doctor[]; loca
         <div className="field">
           <label htmlFor="add-phone">{t.assistant.phone}</label>
           <input id="add-phone" name="phone" type="tel" className="input" maxLength={30} dir="ltr" placeholder="07…" />
+        </div>
+        <div className="field">
+          <label htmlFor="add-time">{t.assistant.time}</label>
+          <input id="add-time" name="time" type="time" step={300} className="input" dir="ltr" aria-describedby="add-time-hint" />
+          <p id="add-time-hint" className="caption" style={{ margin: '4px 0 0' }}>
+            {t.assistant.timeHint}
+          </p>
         </div>
         <div className="field">
           <label htmlFor="add-doctor">{t.assistant.doctor}</label>

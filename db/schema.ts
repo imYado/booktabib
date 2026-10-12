@@ -175,6 +175,8 @@ export const doctorSettings = pgTable('doctor_settings', {
   doctorId: text('doctor_id').primaryKey(),
   // Where the patient's live link sends WhatsApp messages. Empty means the clinic number.
   whatsapp: text('whatsapp').notNull().default(''),
+  // How long a visit usually takes, used to estimate when each waiting patient will be seen.
+  visitMinutes: integer('visit_minutes').notNull().default(15),
 })
 
 // Messages to a patient's account when the clinic acts on their booking. The text is written in the
@@ -188,10 +190,10 @@ export const notifications = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     bookingId: text('booking_id').references(() => bookings.id, { onDelete: 'cascade' }),
     clinicId: text('clinic_id').notNull(),
-    // 'approved', 'arrive', 'turn', 'cancelled', 'done', or 'renew7', 'renew3', 'renewDay' for prescriptions
+    // 'approved', 'arrive', 'turn', 'cancelled', 'done', 'moved', or 'renew7', 'renew3', 'renewDay' for prescriptions
     kind: text('kind').notNull(),
     ticket: integer('ticket'),
-    // For 'arrive': the estimated time (HH:MM) the patient should be there.
+    // For 'arrive': the estimated time (HH:MM) the patient should be there. For 'moved': the new time.
     time: text('time'),
     prescriptionId: text('prescription_id').references(() => prescriptions.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

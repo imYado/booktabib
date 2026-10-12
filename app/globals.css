@@ -677,6 +677,11 @@ fieldset {
   align-items: center;
   gap: 6px;
 }
+/* Estimated time for a waiting patient: stands out from the booked time next to it. */
+.meta .estimate {
+  color: var(--ink);
+  font-weight: 500;
+}
 
 dl.details {
   display: grid;

@@ -15,8 +15,8 @@ import { todayISO } from '@/lib/format'
 import { randomId } from '@/lib/ids'
 import { hashPassword, isWeakPassword, verifyPasswordOrDummy } from '@/lib/password'
 import { clearLimit, clientIp, hit, isLimited, overLimit } from '@/lib/rate-limit'
-import { setClinicAccent, setDoctorWhatsapp } from '@/lib/settings'
-import { addWalkIn, claimBooking, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
+import { setClinicAccent, setDoctorWhatsapp, setVisitMinutes } from '@/lib/settings'
+import { addWalkIn, changeTime, claimBooking, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
 
 export async function setLocale(formData: FormData) {
   const locale = formData.get('locale')
@@ -256,12 +256,18 @@ async function deskUserFor(doctorId: string) {
   return user
 }
 
+/** A time of day typed at the desk (HH:MM, 24-hour), or '' when none or not valid. */
+function clockTime(formData: FormData, key: string) {
+  const v = text(formData, key, 5)
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : ''
+}
+
 export async function addPatient(formData: FormData) {
   const doctorId = text(formData, 'doctorId')
   const patientName = text(formData, 'patientName', 80)
   const phone = text(formData, 'phone', 30)
   if (!patientName || !(await deskUserFor(doctorId))) return
-  await addWalkIn({ doctorId, patientName, phone, note: text(formData, 'note', 300) })
+  await addWalkIn({ doctorId, patientName, phone, note: text(formData, 'note', 300), time: clockTime(formData, 'time') || undefined })
   revalidatePath('/', 'layout')
 }
 
@@ -269,8 +275,22 @@ export async function editPatient(formData: FormData) {
   const booking = await getBooking(text(formData, 'id'))
   const patientName = text(formData, 'patientName', 80)
   const phone = text(formData, 'phone', 30)
-  if (!booking || !patientName || !(await deskUserFor(booking.doctorId))) return
+  const user = booking && (await deskUserFor(booking.doctorId))
+  if (!booking || !patientName || !user) return
   await updateContact(booking, patientName, phone)
+  const time = clockTime(formData, 'time')
+  if (time) await changeTime(booking, time, user.id)
+  revalidatePath('/', 'layout')
+}
+
+export async function updateVisitMinutes(formData: FormData) {
+  const { getDoctor } = await getCatalog()
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const doctor = getDoctor(text(formData, 'doctorId'))
+  const value = Number(text(formData, 'visitMinutes', 3))
+  if (!doctor || !canManageDoctor(user, doctor) || !Number.isInteger(value) || value < 3 || value > 180) return
+  await setVisitMinutes(doctor.id, value)
   revalidatePath('/', 'layout')
 }
 

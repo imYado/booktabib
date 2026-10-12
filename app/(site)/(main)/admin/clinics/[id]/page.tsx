@@ -6,7 +6,7 @@ import { createDoctor, deleteClinic, deleteDoctor, updateClinic, updateDoctor } 
 import { AccountEditor } from '@/components/AccountEditor'
 import { AdminTabs, FormNotice, LocalizedField, PhotoField } from '@/components/AdminParts'
 import { Avatar } from '@/components/Avatar'
-import { AccentPicker, WhatsappField } from '@/components/ClinicSettings'
+import { AccentPicker, VisitMinutesField, WhatsappField } from '@/components/ClinicSettings'
 import { ConfirmButton } from '@/components/ConfirmButton'
 import { ServicesEditor } from '@/components/ServicesEditor'
 import { HonorificPicker } from '@/components/HonorificPicker'
@@ -18,7 +18,7 @@ import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { cities, specialties, specialtyIds, type CityId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
-import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
+import { getClinicAccent, getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
 import { staffOptions } from '../../staff-options'
 import { localDigits } from '@/lib/format'
 
@@ -45,9 +45,10 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
   const query = await searchParams
   const team = doctorsAt(clinic.id)
   const db = await getDb()
-  const [accent, whatsapps, staff] = await Promise.all([
+  const [accent, whatsapps, visitMinutes, staff] = await Promise.all([
     getClinicAccent(clinic.id),
     getDoctorWhatsapps(team.map((d) => d.id)),
+    getVisitMinutes(team.map((d) => d.id)),
     db
       .select({ id: users.id, name: users.name, email: users.email, role: users.role, clinicId: users.clinicId, doctorId: users.doctorId })
       .from(users)
@@ -211,6 +212,7 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
                         </div>
                       </form>
                       <WhatsappField doctor={d} value={whatsapps[d.id] ?? ''} label={t.settings.whatsapp} t={t} />
+                      <VisitMinutesField doctor={d} value={visitMinutes[d.id]} label={t.settings.visit} t={t} />
                       <form action={deleteDoctor}>
                         <input type="hidden" name="id" value={d.id} />
                         <ConfirmButton label={t.edit.removeDoctor} question={t.edit.sure} className="btn btn-danger btn-sm" />
