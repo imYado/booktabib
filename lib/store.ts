@@ -164,7 +164,9 @@ export async function setStatus(booking: Booking, status: BookingStatus, actorId
     .set({ status, ...(status === 'in_progress' ? { calledAt: Date.now() } : {}) })
     .where(eq(bookings.id, booking.id))
     .returning()
-  if (row && row.status !== booking.status && booking.userId !== actorId) await notify(row, status, row.ticket)
+  // Putting someone back in the line after a mistake isn't news to them: they were already confirmed.
+  const undo = status === 'approved' && (booking.status === 'in_progress' || booking.status === 'done')
+  if (row && row.status !== booking.status && booking.userId !== actorId && !undo) await notify(row, status, row.ticket)
   if (booking.date === todayISO()) await remindArrivals(booking.doctorId)
 }
 

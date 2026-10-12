@@ -6,6 +6,7 @@ import { StatusButton } from '@/components/StatusButton'
 import { headers } from 'next/headers'
 import { SendLink } from '@/components/SendLink'
 import { SortableQueue } from '@/components/SortableQueue'
+import { QueueSwitch } from '@/components/QueueSwitch'
 import { AddPatientForm, EditToggle, PatientEditor, PatientRow } from '@/components/DeskParts'
 import { ClinicSettings } from '@/components/ClinicSettings'
 import { getCatalog } from '@/lib/catalog'
@@ -46,8 +47,8 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   ])
   const serving = queue.filter((b) => b.status === 'in_progress')
   const waiting = queue.filter((b) => b.status === 'approved')
-  const seen = queue.filter((b) => b.status === 'in_progress' || b.status === 'done')
-  const removed = queue.filter((b) => b.status === 'cancelled')
+  // Finished today, seen or removed, most recent first; any of them can be added back to the line.
+  const finished = queue.filter((b) => b.status === 'done' || b.status === 'cancelled').reverse()
   // When each waiting patient will likely be seen, from their doctor's line order and visit length.
   const now = nowMinutes()
   const estimates = new Map<string, string>()
@@ -118,74 +119,87 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
           </div>
         )}
 
-        <div className="dash-grid" style={{ marginTop: 56 }}>
-          <div className="stack" style={{ '--stack': '32px' } as React.CSSProperties}>
-            <div>
-              <h2 style={{ fontSize: '1.5rem' }}>{t.assistant.today}</h2>
+        <div className="dash-grid" style={{ marginTop: 40 }}>
+          <section className="card panel">
+            <div className="panel-head">
+              <h2>{t.assistant.today}</h2>
               <AddPatientForm doctors={myDoctors} locale={locale} t={t} />
             </div>
+            <QueueSwitch
+              label={t.assistant.today}
+              tabs={[
+                {
+                  key: 'waiting',
+                  label: t.assistant.waitingTab,
+                  count: localDigits(locale, serving.length + waiting.length),
+                  content: (
+                    <>
+                      {serving.length > 0 && (
+                        <ul className="list with-doctor">
+                          {serving.map((b) => (
+                            <li key={b.id} className="queue-item">
+                              <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
+                                <StatusButton id={b.id} status="done" label={t.assistant.done} primary />
+                                <StatusButton id={b.id} status="approved" label={t.assistant.backToWaiting} />
+                                {linkButtons(b)}
+                              </PatientRow>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {waiting.length ? (
+                        <>
+                          <p className="caption" style={{ margin: '12px 0 0' }}>
+                            {t.assistant.dragHint}
+                          </p>
+                          <SortableQueue
+                            handleLabel={t.assistant.moveHandle}
+                            items={waiting.map((b) => ({
+                              id: b.id,
+                              content: (
+                                <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} estimate={estimates.get(b.id)} locale={locale} t={t}>
+                                  <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />
+                                  {linkButtons(b)}
+                                  <EditToggle id={b.id} label={t.assistant.edit} />
+                                  <StatusButton id={b.id} status="cancelled" label={t.assistant.remove} />
+                                </PatientRow>
+                              ),
+                            }))}
+                          />
+                        </>
+                      ) : (
+                        <p className="caption empty">{t.assistant.noToday}</p>
+                      )}
+                    </>
+                  ),
+                },
+                {
+                  key: 'finished',
+                  label: t.assistant.finishedTab,
+                  count: localDigits(locale, finished.length),
+                  content: finished.length ? (
+                    <ul className="list">
+                      {finished.map((b) => (
+                        <li key={b.id} className={`queue-item${b.status === 'cancelled' ? ' is-removed' : ''}`}>
+                          <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
+                            <StatusButton id={b.id} status="approved" label={t.assistant.addBack} />
+                          </PatientRow>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="caption empty">{t.assistant.noFinished}</p>
+                  ),
+                },
+              ]}
+            />
+          </section>
 
-            <div>
-              <h3 className="list-title">{t.assistant.waiting}</h3>
-              {waiting.length ? (
-                <>
-                  <p className="caption" style={{ marginTop: 0 }}>
-                    {t.assistant.dragHint}
-                  </p>
-                  <SortableQueue
-                    handleLabel={t.assistant.moveHandle}
-                    items={waiting.map((b) => ({
-                      id: b.id,
-                      content: (
-                        <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} estimate={estimates.get(b.id)} locale={locale} t={t}>
-                          <StatusButton id={b.id} status="in_progress" label={t.assistant.call} primary />
-                          {linkButtons(b)}
-                          <EditToggle id={b.id} label={t.assistant.edit} />
-                          <StatusButton id={b.id} status="cancelled" label={t.assistant.remove} />
-                        </PatientRow>
-                      ),
-                    }))}
-                  />
-                </>
-              ) : (
-                <p className="caption">{t.assistant.noToday}</p>
-              )}
+          <section className="card panel">
+            <div className="panel-head">
+              <h2>{t.assistant.pending}</h2>
+              <span className="switch-count">{localDigits(locale, pending.length)}</span>
             </div>
-
-            {seen.length > 0 && (
-              <div>
-                <h3 className="list-title">{t.assistant.withDoctor}</h3>
-                <ul className="list">
-                  {seen.map((b) => (
-                    <li key={b.id} className="queue-item">
-                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
-                        {b.status === 'in_progress' && <StatusButton id={b.id} status="done" label={t.assistant.done} primary />}
-                        {b.status === 'in_progress' && linkButtons(b)}
-                      </PatientRow>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {removed.length > 0 && (
-              <div>
-                <h3 className="list-title">{t.assistant.removed}</h3>
-                <ul className="list">
-                  {removed.map((b) => (
-                    <li key={b.id} className="queue-item is-removed">
-                      <PatientRow b={b} doctorName={getDoctor(b.doctorId)?.name[locale]} locale={locale} t={t}>
-                        <StatusButton id={b.id} status="approved" label={t.assistant.addBack} />
-                      </PatientRow>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h2 style={{ fontSize: '1.5rem' }}>{t.assistant.pending}</h2>
             {pending.length ? (
               <ul className="list">
                 {pending.map((b) => (
@@ -214,9 +228,9 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                 ))}
               </ul>
             ) : (
-              <p className="caption">{t.assistant.noPending}</p>
+              <p className="caption empty">{t.assistant.noPending}</p>
             )}
-          </div>
+          </section>
         </div>
 
         <RenewalsPanel

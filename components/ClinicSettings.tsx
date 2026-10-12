@@ -92,7 +92,7 @@ export function ClinicSettings({
   t: Dictionary
 }) {
   return (
-    <section className="card stack" style={{ '--stack': '32px', marginTop: 56 } as React.CSSProperties}>
+    <section className="card stack" style={{ '--stack': '32px', marginTop: 32 } as React.CSSProperties}>
       <div>
         <h2 style={{ fontSize: '1.5rem' }}>{t.settings.title}</h2>
         <p className="caption" style={{ margin: 0 }}>

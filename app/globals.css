@@ -768,13 +768,112 @@ dl.details dd {
 
 .dash-grid {
   display: grid;
-  gap: 56px;
+  gap: 24px;
+  align-items: start;
 }
 @media (min-width: 960px) {
   .dash-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 72px;
+    gap: 32px;
   }
+}
+
+/* Staff pages: each tool sits in its own bordered panel with a title row on top. */
+.panel {
+  padding: 20px;
+}
+@media (min-width: 640px) {
+  .panel {
+    padding: 24px 28px;
+  }
+}
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.panel-head h2 {
+  font-size: 1.375rem;
+  margin: 0;
+}
+.panel-head .add-patient {
+  margin: 0;
+}
+.panel-head .add-patient[open] {
+  flex-basis: 100%;
+}
+.panel .list > li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.panel .empty {
+  margin: 16px 0 0;
+}
+
+/* Waiting / Finished switch above the queue. */
+.switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper);
+}
+.switch-option {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--caption);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.switch-option[aria-selected='true'] {
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.switch-option:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.switch-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.switch-panel {
+  margin-top: 8px;
+}
+/* The patient with the doctor right now, on top of the waiting list. */
+.list.with-doctor > li {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+.list.with-doctor > li:last-child {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .ticket {
@@ -1484,7 +1583,7 @@ dl.details dd {
 /* Prescription renewals on the desk and doctor dashboard */
 
 .renewals {
-  margin-top: 56px;
+  margin-top: 32px;
 }
 .renewal {
   display: flex;

@@ -96,7 +96,11 @@ export function canUpdateBooking(
   if (booking.userId === user.id && status === 'cancelled') return booking.status === 'pending' || booking.status === 'approved'
   // An assistant works for a whole clinic, or for one doctor in it.
   if (user.role === 'assistant') return user.clinicId === booking.clinicId && (!user.doctorId || user.doctorId === booking.doctorId)
-  if (user.role === 'doctor') return user.doctorId === booking.doctorId && (status === 'in_progress' || status === 'done')
+  // Doctors call patients in and finish them, and can undo that: back to the waiting line.
+  if (user.role === 'doctor') {
+    const undo = status === 'approved' && (booking.status === 'in_progress' || booking.status === 'done')
+    return user.doctorId === booking.doctorId && (status === 'in_progress' || status === 'done' || undo)
+  }
   return false
 }
 
