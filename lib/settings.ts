@@ -5,11 +5,27 @@ import { clinicSettings, doctorSettings } from '@/db/schema'
 import { isAccent, type AccentId } from './accents'
 import { getCatalog } from './catalog'
 import { MINUTES_PER_PATIENT } from './data'
+import { isLocale, type Locale } from './i18n'
 
 export async function getClinicAccent(clinicId: string): Promise<AccentId> {
   const db = await getDb()
   const [row] = await db.select().from(clinicSettings).where(eq(clinicSettings.clinicId, clinicId)).limit(1)
   return isAccent(row?.accent) ? row.accent : 'paper'
+}
+
+/** The language the clinic's TV screen is shown in: Arabic unless the clinic picked another. */
+export async function getScreenLocale(clinicId: string): Promise<Locale> {
+  const db = await getDb()
+  const [row] = await db.select().from(clinicSettings).where(eq(clinicSettings.clinicId, clinicId)).limit(1)
+  return isLocale(row?.screenLocale) ? row.screenLocale : 'ar'
+}
+
+export async function setScreenLocale(clinicId: string, screenLocale: Locale) {
+  const db = await getDb()
+  await db
+    .insert(clinicSettings)
+    .values({ clinicId, screenLocale })
+    .onConflictDoUpdate({ target: clinicSettings.clinicId, set: { screenLocale } })
 }
 
 /** Accent of every clinic that has chosen one, for lists of clinic cards. */

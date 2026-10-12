@@ -6,7 +6,7 @@ import { createDoctor, deleteClinic, deleteDoctor, updateClinic, updateDoctor } 
 import { AccountEditor } from '@/components/AccountEditor'
 import { AdminTabs, FormNotice, LocalizedField, PhotoField } from '@/components/AdminParts'
 import { Avatar } from '@/components/Avatar'
-import { AccentPicker, VisitMinutesField, WhatsappField } from '@/components/ClinicSettings'
+import { AccentPicker, ScreenLanguageField, VisitMinutesField, WhatsappField } from '@/components/ClinicSettings'
 import { ConfirmButton } from '@/components/ConfirmButton'
 import { ServicesEditor } from '@/components/ServicesEditor'
 import { HonorificPicker } from '@/components/HonorificPicker'
@@ -18,7 +18,7 @@ import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { cities, specialties, specialtyIds, type CityId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
-import { getClinicAccent, getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
+import { getClinicAccent, getDoctorWhatsapps, getScreenLocale, getVisitMinutes } from '@/lib/settings'
 import { staffOptions } from '../../staff-options'
 import { localDigits } from '@/lib/format'
 
@@ -45,8 +45,9 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
   const query = await searchParams
   const team = doctorsAt(clinic.id)
   const db = await getDb()
-  const [accent, whatsapps, visitMinutes, staff] = await Promise.all([
+  const [accent, screenLocale, whatsapps, visitMinutes, staff] = await Promise.all([
     getClinicAccent(clinic.id),
+    getScreenLocale(clinic.id),
     getDoctorWhatsapps(team.map((d) => d.id)),
     getVisitMinutes(team.map((d) => d.id)),
     db
@@ -146,8 +147,9 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
             </div>
           </form>
 
-          <div className="card">
+          <div className="card stack" style={{ '--stack': '32px' } as React.CSSProperties}>
             <AccentPicker clinic={clinic} accent={accent} t={t} />
+            <ScreenLanguageField clinic={clinic} value={screenLocale} t={t} />
           </div>
 
           <div id="doctors">

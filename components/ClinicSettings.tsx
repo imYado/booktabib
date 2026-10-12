@@ -1,7 +1,7 @@
-import { updateClinicAccent, updateDoctorWhatsapp, updateVisitMinutes } from '@/app/actions'
+import { updateClinicAccent, updateDoctorWhatsapp, updateScreenLocale, updateVisitMinutes } from '@/app/actions'
 import { accentIds, accents, type AccentId } from '@/lib/accents'
 import type { Clinic, Doctor } from '@/lib/data'
-import type { Dictionary, Locale } from '@/lib/i18n'
+import { localeNames, locales, type Dictionary, type Locale } from '@/lib/i18n'
 
 /** Accent colour picker for a clinic. */
 export function AccentPicker({ clinic, accent, t }: { clinic: Clinic; accent: AccentId; t: Dictionary }) {
@@ -54,6 +54,35 @@ export function WhatsappField({
   )
 }
 
+/** Which language the clinic's TV screen is shown in. */
+export function ScreenLanguageField({ clinic, value, t }: { clinic: Clinic; value: Locale; t: Dictionary }) {
+  return (
+    <form action={updateScreenLocale} className="stack" style={{ '--stack': '12px' } as React.CSSProperties}>
+      <input type="hidden" name="clinicId" value={clinic.id} />
+      <div>
+        <label htmlFor="screen-locale" className="field-legend">
+          {t.settings.screenLanguage}
+        </label>
+        <p className="caption" style={{ margin: '4px 0 0' }}>
+          {t.settings.screenHint}
+        </p>
+      </div>
+      <div className="row">
+        <select id="screen-locale" name="screenLocale" className="select" defaultValue={value} style={{ maxWidth: 240 }}>
+          {locales.map((l) => (
+            <option key={l} value={l} lang={l}>
+              {localeNames[l]}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="btn btn-secondary btn-sm">
+          {t.settings.save}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 /** How long one doctor's visits usually take, which sets the estimated times patients see. */
 export function VisitMinutesField({ doctor, value, label, t }: { doctor: Doctor; value: number; label: string; t: Dictionary }) {
   const id = `visit-${doctor.id}`
@@ -78,6 +107,7 @@ export function ClinicSettings({
   doctors,
   whatsapps,
   visitMinutes,
+  screenLocale,
   canEditAccent,
   locale,
   t,
@@ -87,6 +117,7 @@ export function ClinicSettings({
   doctors: Doctor[]
   whatsapps: Record<string, string>
   visitMinutes: Record<string, number>
+  screenLocale: Locale
   canEditAccent: boolean
   locale: Locale
   t: Dictionary
@@ -100,6 +131,7 @@ export function ClinicSettings({
         </p>
       </div>
       {canEditAccent && <AccentPicker clinic={clinic} accent={accent} t={t} />}
+      {canEditAccent && <ScreenLanguageField clinic={clinic} value={screenLocale} t={t} />}
       <div className="stack" style={{ '--stack': '12px' } as React.CSSProperties}>
         <p className="field-legend" style={{ margin: 0 }}>
           {t.settings.whatsapp}

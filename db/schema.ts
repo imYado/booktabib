@@ -169,6 +169,8 @@ export const favorites = pgTable(
 export const clinicSettings = pgTable('clinic_settings', {
   clinicId: text('clinic_id').primaryKey(),
   accent: text('accent').notNull().default('paper'),
+  // Language of the clinic's TV screen ('en', 'ar' or 'ckb'), whatever language the TV's browser is set to.
+  screenLocale: text('screen_locale').notNull().default('ar'),
 })
 
 export const doctorSettings = pgTable('doctor_settings', {

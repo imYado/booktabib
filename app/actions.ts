@@ -15,7 +15,7 @@ import { todayISO } from '@/lib/format'
 import { randomId } from '@/lib/ids'
 import { hashPassword, isWeakPassword, verifyPasswordOrDummy } from '@/lib/password'
 import { clearLimit, clientIp, hit, isLimited, overLimit } from '@/lib/rate-limit'
-import { setClinicAccent, setDoctorWhatsapp, setVisitMinutes } from '@/lib/settings'
+import { setClinicAccent, setDoctorWhatsapp, setScreenLocale, setVisitMinutes } from '@/lib/settings'
 import { addWalkIn, changeTime, claimBooking, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
 
 export async function setLocale(formData: FormData) {
@@ -221,6 +221,17 @@ export async function createStaff(_prev: CreateStaffState, formData: FormData): 
   })
   revalidatePath('/admin')
   return { ok: true, email, password }
+}
+
+export async function updateScreenLocale(formData: FormData) {
+  const { getClinic } = await getCatalog()
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const clinicId = text(formData, 'clinicId')
+  const screenLocale = text(formData, 'screenLocale')
+  if (!getClinic(clinicId) || !isLocale(screenLocale) || !canManageClinic(user, clinicId)) return
+  await setScreenLocale(clinicId, screenLocale)
+  revalidatePath('/', 'layout')
 }
 
 export async function updateClinicAccent(formData: FormData) {
