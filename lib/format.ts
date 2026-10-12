@@ -54,3 +54,8 @@ export function formatTime(locale: Locale, hhmm: string): string {
 export function localDigits(locale: Locale, value: number | string): string {
   return locale === 'en' ? String(value) : String(value).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)])
 }
+
+/** Whole days from one ISO date to another: daysUntil('2026-01-01', '2026-01-08') is 7. */
+export function daysUntil(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
+}

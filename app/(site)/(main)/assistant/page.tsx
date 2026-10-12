@@ -10,7 +10,9 @@ import { AddPatientForm, EditToggle, PatientEditor, PatientRow } from '@/compone
 import { ClinicSettings } from '@/components/ClinicSettings'
 import { getCatalog } from '@/lib/catalog'
 import { whatsappNumber } from '@/lib/data'
-import { formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
+import { addDays, formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
+import { listRenewals } from '@/lib/prescriptions'
+import { RenewalsPanel } from '@/components/RenewalsPanel'
 import { canManageClinic, requireUser } from '@/lib/auth'
 import { getClinicAccent, getDoctorWhatsapps } from '@/lib/settings'
 import { getI18n } from '@/lib/locale'
@@ -21,22 +23,25 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.assistant.title, robots: { index: false } }
 }
 
-export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ clinic?: string }> }) {
+export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ clinic?: string; renew?: string }> }) {
   const { clinics, doctorsAt, getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await requireUser(['assistant', 'admin'], '/assistant')
   // Assistants work for one clinic; administrators can look at any.
-  const clinic = (user.role === 'assistant' ? getClinic(user.clinicId ?? '') : getClinic((await searchParams).clinic ?? '')) ?? clinics[0]
+  const query = await searchParams
+  const clinic = (user.role === 'assistant' ? getClinic(user.clinicId ?? '') : getClinic(query.clinic ?? '')) ?? clinics[0]
   const today = todayISO()
 
   // An assistant tied to one doctor only sees that doctor's patients.
   const doctorId = user.role === 'assistant' ? (user.doctorId ?? undefined) : undefined
   const myDoctors = doctorsAt(clinic.id).filter((d) => !doctorId || d.id === doctorId)
-  const [pending, queue, accent, whatsapps] = await Promise.all([
+  const [pending, queue, accent, whatsapps, renewals, recent] = await Promise.all([
     listBookings({ clinicId: clinic.id, doctorId, status: 'pending', fromDate: today }),
     listBookings({ clinicId: clinic.id, doctorId, date: today, status: ['approved', 'in_progress', 'done', 'cancelled'] }),
     getClinicAccent(clinic.id),
     getDoctorWhatsapps(myDoctors.map((d) => d.id)),
+    listRenewals(clinic.id, doctorId),
+    listBookings({ clinicId: clinic.id, doctorId, fromDate: addDays(today, -90), status: ['pending', 'approved', 'in_progress', 'done'] }),
   ])
   const serving = queue.filter((b) => b.status === 'in_progress')
   const waiting = queue.filter((b) => b.status === 'approved')
@@ -205,6 +210,18 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
             )}
           </div>
         </div>
+
+        <RenewalsPanel
+          rows={renewals}
+          doctors={myDoctors}
+          recent={recent.filter((b) => b.date <= addDays(today, 30))}
+          clinicName={clinic.name[locale]}
+          origin={origin}
+          back={user.role === 'admin' ? `/assistant?clinic=${clinic.id}` : '/assistant'}
+          flag={query.renew}
+          locale={locale}
+          t={t}
+        />
 
         <ClinicSettings
           clinic={clinic}

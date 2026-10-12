@@ -20,6 +20,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: `${t.brand}`, template: `%s · ${t.brand}` },
     description: t.tagline,
+    // Opened from the home screen on an iPhone, it runs full screen with the site's name under the icon.
+    appleWebApp: { capable: true, title: t.brand, statusBarStyle: 'default' },
   }
 }
 

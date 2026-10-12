@@ -1,9 +1,9 @@
 import 'server-only'
-import { and, asc, desc, eq, gte, inArray, ne, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNotNull, ne, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { bookings, notifications, type BookedService, type Booking, type BookingStatus } from '@/db/schema'
 import { getCatalog } from './catalog'
-import { dailySlots, isWorkingDay } from './data'
+import { dailySlots, isWorkingDay, MINUTES_PER_PATIENT } from './data'
 import { CLINIC_TIME_ZONE, todayISO } from './format'
 import { randomId } from './ids'
 
@@ -164,6 +164,7 @@ export async function setStatus(booking: Booking, status: BookingStatus, actorId
     .where(eq(bookings.id, booking.id))
     .returning()
   if (row && row.status !== booking.status && booking.userId !== actorId) await notify(row, status, row.ticket)
+  if (booking.date === todayISO()) await remindArrivals(booking.doctorId)
 }
 
 /** The patients currently with a doctor at a clinic today, most recently called first. */
@@ -206,6 +207,7 @@ export async function reorderQueue(ordered: Booking[]) {
       await db.update(bookings).set({ position: keys[i] }).where(eq(bookings.id, ordered[i].id))
     }
   }
+  for (const doctorId of new Set(ordered.map((b) => b.doctorId))) await remindArrivals(doctorId)
 }
 
 /** A patient added at the desk: approved straight away, at the end of today's line for their doctor. */
@@ -254,4 +256,46 @@ export async function claimBooking(token: string, user: { id: string; phone: str
     .where(and(eq(bookings.id, booking.id), sql`${bookings.userId} is null`))
     .returning({ id: bookings.id })
   return row ? 'claimed' : 'mismatch'
+}
+
+/** When a waiting patient will likely be seen: their own time, or later when `ahead` people are before them. */
+export function estimatedTime(booking: Pick<Booking, 'time'>, ahead: number) {
+  const m = Math.round(Math.max(minutes(booking.time), minutes(nowHHMM()) + ahead * MINUTES_PER_PATIENT) / 5) * 5
+  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
+/** How many waiting patients get the "time to come in" reminder: the next ones in line. */
+const ARRIVE_AHEAD = 2
+
+/**
+ * Tells signed-in patients near the front of a doctor's line today to make their way to the clinic,
+ * with the estimated time. Each booking gets this once.
+ */
+export async function remindArrivals(doctorId: string) {
+  const today = todayISO()
+  const line = await listBookings({ doctorId, date: today, status: ['approved', 'in_progress'] })
+  const serving = line.some((b) => b.status === 'in_progress') ? 1 : 0
+  const near = line
+    .filter((b) => b.status === 'approved')
+    .map((b, i) => ({ b, ahead: serving + i }))
+    .filter(({ b, ahead }) => b.userId && ahead <= ARRIVE_AHEAD)
+  if (!near.length) return
+  const db = await getDb()
+  const told = await db
+    .select({ bookingId: notifications.bookingId })
+    .from(notifications)
+    .where(and(eq(notifications.kind, 'arrive'), isNotNull(notifications.bookingId), inArray(notifications.bookingId, near.map(({ b }) => b.id))))
+  const done = new Set(told.map((r) => r.bookingId))
+  for (const { b, ahead } of near) {
+    if (done.has(b.id)) continue
+    await db.insert(notifications).values({
+      id: randomId(16),
+      userId: b.userId!,
+      bookingId: b.id,
+      clinicId: b.clinicId,
+      kind: 'arrive',
+      ticket: b.ticket,
+      time: estimatedTime(b, ahead),
+    })
+  }
 }

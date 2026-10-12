@@ -11,22 +11,33 @@ import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { getDoctorWhatsapps } from '@/lib/settings'
 import { listBookings } from '@/lib/store'
+import { headers } from 'next/headers'
+import { listRenewals } from '@/lib/prescriptions'
+import { RenewalsPanel } from '@/components/RenewalsPanel'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
   return { title: t.doctorDash.title, robots: { index: false } }
 }
 
-export default async function DoctorDashboard({ searchParams }: { searchParams: Promise<{ doctor?: string }> }) {
+export default async function DoctorDashboard({ searchParams }: { searchParams: Promise<{ doctor?: string; renew?: string }> }) {
   const { doctors, getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await requireUser(['doctor', 'admin'], '/doctor')
   // Doctors see their own day; administrators can look at any doctor.
-  const doctor = (user.role === 'doctor' ? getDoctor(user.doctorId ?? '') : getDoctor((await searchParams).doctor ?? '')) ?? doctors[0]
+  const query = await searchParams
+  const doctor = (user.role === 'doctor' ? getDoctor(user.doctorId ?? '') : getDoctor(query.doctor ?? '')) ?? doctors[0]
   const clinic = getClinic(doctor.clinicId)!
   const today = todayISO()
 
-  const [mine, whatsapps] = await Promise.all([listBookings({ doctorId: doctor.id, fromDate: today }), getDoctorWhatsapps([doctor.id])])
+  const [mine, whatsapps, renewals, recent] = await Promise.all([
+    listBookings({ doctorId: doctor.id, fromDate: today }),
+    getDoctorWhatsapps([doctor.id]),
+    listRenewals(clinic.id, doctor.id),
+    listBookings({ doctorId: doctor.id, fromDate: addDays(today, -90), status: ['pending', 'approved', 'in_progress', 'done'] }),
+  ])
+  const h = await headers()
+  const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}`
   const todays = mine.filter((b) => b.date === today && b.status !== 'pending' && b.status !== 'cancelled')
   const waiting = todays.filter((b) => b.status === 'approved')
   const seen = todays.filter((b) => b.status === 'done')
@@ -141,6 +152,18 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
             )}
           </div>
         </div>
+
+        <RenewalsPanel
+          rows={renewals}
+          doctors={[doctor]}
+          recent={recent.filter((b) => b.date <= addDays(today, 30))}
+          clinicName={clinic.name[locale]}
+          origin={origin}
+          back={user.role === 'admin' ? `/doctor?doctor=${doctor.id}` : '/doctor'}
+          flag={query.renew}
+          locale={locale}
+          t={t}
+        />
 
         <div className="card stack" style={{ '--stack': '12px', marginTop: 56 } as React.CSSProperties}>
           <p className="caption" style={{ margin: 0 }}>

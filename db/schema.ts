@@ -188,14 +188,46 @@ export const notifications = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     bookingId: text('booking_id').references(() => bookings.id, { onDelete: 'cascade' }),
     clinicId: text('clinic_id').notNull(),
-    // 'approved', 'turn', 'cancelled' or 'done'
+    // 'approved', 'arrive', 'turn', 'cancelled', 'done', or 'renew7', 'renew3', 'renewDay' for prescriptions
     kind: text('kind').notNull(),
     ticket: integer('ticket'),
+    // For 'arrive': the estimated time (HH:MM) the patient should be there.
+    time: text('time'),
+    prescriptionId: text('prescription_id').references(() => prescriptions.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     readAt: timestamp('read_at', { withTimezone: true }),
   },
   (t) => [index('notifications_user_idx').on(t.userId, t.createdAt)],
 )
+
+// A patient whose prescription runs out on `renewOn`, added by the doctor or an assistant. The patient's
+// account is reminded 7 days before, then 3 days before and on the day unless they have booked again.
+export const prescriptions = pgTable(
+  'prescriptions',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id').notNull(),
+    doctorId: text('doctor_id').notNull(),
+    // The patient's account, when the prescription was added from a booking made while signed in.
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+    patientName: text('patient_name').notNull(),
+    phone: text('phone').notNull().default(''),
+    renewOn: date('renew_on').notNull(),
+    createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // Ticked by staff once they told the patient themselves, for example on WhatsApp.
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    // The latest in-app reminder sent: '', '7', '3' or 'day'.
+    appStage: text('app_stage').notNull().default(''),
+    // When an in-app reminder last actually went out (the 3-day and same-day ones are skipped once they've booked).
+    appSentAt: timestamp('app_sent_at', { withTimezone: true }),
+    // Renewed or no longer needed: off the list.
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+  },
+  (t) => [index('prescriptions_clinic_idx').on(t.clinicId, t.renewOn), index('prescriptions_user_idx').on(t.userId)],
+)
+
+export type Prescription = typeof prescriptions.$inferSelect
 
 export type DoctorService = { name: Localized; fee: number }
 export type BookedService = DoctorService
