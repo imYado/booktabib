@@ -1873,17 +1873,21 @@ dl.details dd {
   pointer-events: none;
 }
 .ig-text {
-  min-height: 80px;
+  min-height: 64px;
   padding-top: 8px;
   text-align: center;
 }
 .ig-step-num {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--caption);
-  text-transform: uppercase;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-inline-end: 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 0.95rem;
+  vertical-align: 2px;
 }
 .ig-step-title {
   margin: 2px 0 0;
