@@ -2,16 +2,22 @@
 
 /* eslint-disable @next/next/no-img-element -- the app icon is a small static file */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { setLocale } from '@/app/actions'
+import { localeNames, locales, type Locale } from '@/lib/i18n'
 
 export type InstallLabels = {
   title: string
   lead: string
-  steps: [string, string, string]
+  steps: string[]
   ios: { title: string; hint: string }[]
   android: { title: string; hint: string }[]
   doneTitle: string
   menuAdd: string
+  menuShare: string
+  menuViewMore: string
+  menuFavorite: string
+  openAsApp: string
   menuCopy: string
   menuBookmark: string
   add: string
@@ -69,10 +75,12 @@ export function InstallLink({ label }: { label: string }) {
  * A step-by-step picture guide for adding booktabib to a phone's home screen. Opens by itself once on
  * phones (not when already opened from the home screen), and again from the footer link.
  */
-export function InstallGuide({ labels }: { labels: InstallLabels }) {
+export function InstallGuide({ labels, locale }: { labels: InstallLabels; locale: Locale }) {
   const [open, setOpen] = useState(false)
   const [platform, setPlatform] = useState<Platform>('ios')
-  const [step, setStep] = useState(0)
+  // -1 is the language question, asked before the steps so they read in the person's language.
+  const [step, setStep] = useState(-1)
+  const [switching, startSwitch] = useTransition()
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null)
 
   useEffect(() => {
@@ -83,7 +91,7 @@ export function InstallGuide({ labels }: { labels: InstallLabels }) {
     }
     const onOpen = () => {
       if (found) setPlatform(found)
-      setStep(0)
+      setStep(-1)
       setOpen(true)
     }
     window.addEventListener('beforeinstallprompt', onPrompt)
@@ -111,7 +119,52 @@ export function InstallGuide({ labels }: { labels: InstallLabels }) {
 
   if (!open) return null
   const texts = platform === 'ios' ? labels.ios : labels.android
-  const last = step === 3
+  const last = step === texts.length
+
+  if (step === -1) {
+    return (
+      <div className="ig-backdrop" onClick={(e) => e.target === e.currentTarget && close()}>
+        <div className="ig-sheet" role="dialog" aria-modal="true" aria-labelledby="ig-lang-title">
+          <div className="ig-lang-head">
+            <img src="/icon-192.png" alt="" width={64} height={64} className="ig-app" />
+            {/* Asked in every language at once, since we don't know yet which one they read. */}
+            <h2 id="ig-lang-title">
+              <span lang="ar" dir="rtl">اختر لغتك</span>
+              <span lang="ckb" dir="rtl">زمانەکەت هەڵبژێرە</span>
+              <span lang="en" dir="ltr">Choose your language</span>
+            </h2>
+          </div>
+          <div className="ig-langs">
+            {locales.map((l) => (
+              <button
+                key={l}
+                type="button"
+                lang={l}
+                className={l === locale ? 'ig-lang is-current' : 'ig-lang'}
+                disabled={switching}
+                onClick={() =>
+                  startSwitch(async () => {
+                    if (l !== locale) {
+                      const form = new FormData()
+                      form.set('locale', l)
+                      // The page comes back in the new language; the guide stays open and carries on.
+                      await setLocale(form)
+                    }
+                    setStep(0)
+                  })
+                }
+              >
+                {localeNames[l]}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 16 }} onClick={close}>
+            {labels.later}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="ig-backdrop" onClick={(e) => e.target === e.currentTarget && close()}>
@@ -174,13 +227,13 @@ export function InstallGuide({ labels }: { labels: InstallLabels }) {
         </div>
 
         <div className="ig-dots" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
+          {Array.from({ length: texts.length + 1 }, (_, i) => (
             <span key={i} className={i === step ? 'on' : undefined} />
           ))}
         </div>
 
         <div className="ig-nav">
-          {step > 0 ? (
+          {step >= 0 ? (
             <button type="button" className="btn btn-secondary" onClick={() => setStep(step - 1)}>
               {labels.back}
             </button>
@@ -248,15 +301,15 @@ function Home({ labels }: { labels: InstallLabels }) {
 }
 
 function IosPicture({ step, labels }: { step: number; labels: InstallLabels }) {
-  if (step === 3)
+  if (step === 4)
     return (
       <div className="ig-phone">
         <Home labels={labels} />
       </div>
     )
-  return (
-    <div className="ig-phone">
-      {step === 2 ? (
+  if (step === 3)
+    return (
+      <div className="ig-phone">
         <div className="ig-dialog-ios">
           <div className="ig-dialog-bar">
             <span className="ig-muted">✕</span>
@@ -270,20 +323,46 @@ function IosPicture({ step, labels }: { step: number; labels: InstallLabels }) {
               <div className="ig-line w70" />
             </div>
           </div>
+          <div className="ig-toggle-row">
+            <span>{labels.openAsApp}</span>
+            <span className="ig-toggle" />
+          </div>
         </div>
-      ) : (
-        <Page />
-      )}
+      </div>
+    )
+  return (
+    <div className="ig-phone">
+      <Page />
+      {/* Safari on iOS 26: the address bar sits at the bottom, with ⋯ beside it. */}
+      <div className="ig-safari26">
+        <span className="ig-round">‹</span>
+        <span className="ig-address">booktabib.com</span>
+        <span className={step === 0 ? 'ig-round ig-hot' : 'ig-round'}>⋯</span>
+      </div>
       {step === 1 && (
+        <div className="ig-popover">
+          <div className="ig-row ig-hot">
+            {labels.menuShare}
+            <span className="ig-row-icon">
+              <ShareIcon />
+            </span>
+          </div>
+          <div className="ig-row">
+            {labels.menuBookmark}
+            <span className="ig-row-icon">☆</span>
+          </div>
+          <div className="ig-row">
+            {labels.menuFavorite}
+            <span className="ig-row-icon">♡</span>
+          </div>
+        </div>
+      )}
+      {step === 2 && (
         <div className="ig-sheet-ios">
           <div className="ig-grab" />
           <div className="ig-row">
             {labels.menuCopy}
             <span className="ig-row-icon">⧉</span>
-          </div>
-          <div className="ig-row">
-            {labels.menuBookmark}
-            <span className="ig-row-icon">☆</span>
           </div>
           <div className="ig-row ig-hot">
             {labels.menuAdd}
@@ -291,20 +370,7 @@ function IosPicture({ step, labels }: { step: number; labels: InstallLabels }) {
               <PlusSquare />
             </span>
           </div>
-        </div>
-      )}
-      {step === 0 && (
-        <div className="ig-safari">
-          <div className="ig-address">booktabib.com</div>
-          <div className="ig-toolbar">
-            <span>‹</span>
-            <span className="ig-muted">›</span>
-            <span className="ig-hot">
-              <ShareIcon />
-            </span>
-            <span>▢</span>
-            <span>⧉</span>
-          </div>
+          <div className="ig-row ig-more">{labels.menuViewMore}</div>
         </div>
       )}
     </div>

@@ -4,7 +4,7 @@ import { InstallGuideMount } from '@/components/InstallGuideMount'
 import { getI18n } from '@/lib/locale'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const { t } = await getI18n()
+  const { locale, t } = await getI18n()
   return (
     <>
       {children}
@@ -21,7 +21,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <span>{t.common.sampleNotice}</span>
         </div>
       </footer>
-      <InstallGuideMount t={t} />
+      <InstallGuideMount t={t} locale={locale} />
     </>
   )
 }
