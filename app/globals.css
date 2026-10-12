@@ -1598,7 +1598,7 @@ dl.details dd {
   display: flex;
   gap: 14px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .ig-head h2 {
   font-size: 1.15rem;
@@ -1641,14 +1641,14 @@ dl.details dd {
 .ig-stage {
   display: grid;
   place-items: center;
-  padding: 14px 0;
+  padding: 10px 0;
   border-radius: 20px;
   background: var(--paper);
 }
 .ig-phone {
   position: relative;
-  width: 180px;
-  height: 260px;
+  width: 170px;
+  height: 230px;
   overflow: hidden;
   border: 6px solid var(--ink);
   border-radius: 30px;
@@ -1680,13 +1680,6 @@ dl.details dd {
   border-radius: 10px;
   background: var(--paper);
 }
-.ig-safari {
-  position: absolute;
-  inset: auto 0 0;
-  padding: 8px 10px 12px;
-  border-top: 1px solid var(--rule);
-  background: var(--white);
-}
 .ig-address {
   padding: 5px 10px;
   border-radius: 9px;
@@ -1694,21 +1687,6 @@ dl.details dd {
   text-align: center;
   font-size: 10px;
   color: var(--caption);
-}
-.ig-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 6px 0;
-  font-size: 18px;
-  line-height: 1;
-  color: #2f7cf6;
-}
-.ig-toolbar > span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
 }
 .ig-muted {
   opacity: 0.35;
@@ -1755,6 +1733,13 @@ dl.details dd {
   border-bottom: 1px solid var(--rule);
 }
 .ig-bar-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
   font-weight: 600;
   font-size: 10px;
 }
@@ -1888,8 +1873,8 @@ dl.details dd {
   pointer-events: none;
 }
 .ig-text {
-  min-height: 88px;
-  padding-top: 10px;
+  min-height: 80px;
+  padding-top: 8px;
   text-align: center;
 }
 .ig-step-num {
@@ -1972,4 +1957,122 @@ dl.details dd {
 }
 .notification-list svg {
   flex: none;
+}
+
+/* Language question before the add-to-home-screen steps */
+.ig-lang-head {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 8px 0 18px;
+  text-align: center;
+}
+.ig-lang-head h2 {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+.ig-langs {
+  display: grid;
+  gap: 10px;
+}
+.ig-lang {
+  min-height: 60px;
+  border: 1.5px solid var(--rule);
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--font-vazirmatn), var(--font-body);
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ig-lang.is-current {
+  border-color: var(--ink);
+}
+.ig-lang:disabled {
+  opacity: 0.6;
+}
+
+/* iOS 26 Safari: address bar at the bottom with round buttons either side */
+.ig-safari26 {
+  position: absolute;
+  inset: auto 10px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ig-safari26 .ig-address {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+}
+.ig-round {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--white);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.15);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+.ig-round.ig-hot {
+  border-radius: 999px;
+}
+.ig-popover {
+  position: absolute;
+  right: 8px;
+  bottom: 46px;
+  width: 150px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.22);
+  animation: ig-fade 250ms var(--ease);
+}
+.ig-popover .ig-row {
+  margin: 0 0 3px;
+  padding: 8px;
+}
+.ig-more {
+  justify-content: center;
+  color: #2f7cf6;
+  font-weight: 600;
+}
+.ig-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 4px 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+.ig-toggle {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  border-radius: 999px;
+  background: #34c759;
+}
+.ig-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
 }

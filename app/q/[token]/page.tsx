@@ -152,7 +152,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
           {t.live.autoUpdate}
         </p>
       )}
-      <InstallGuideMount t={t} />
+      <InstallGuideMount t={t} locale={locale} />
     </main>
   )
 }
