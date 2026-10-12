@@ -98,7 +98,7 @@ export function RenewalsPanel({
     .slice(0, 60)
 
   return (
-    <section id="renewals" className="renewals">
+    <section id="renewals" className="renewals card panel">
       <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{r.title}</h2>
       <p className="caption" style={{ margin: '4px 0 16px' }}>
         {r.lead}

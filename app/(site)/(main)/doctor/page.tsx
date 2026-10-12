@@ -10,7 +10,8 @@ import { addDays, formatDay, formatNumber, formatTime, localDigits, todayISO } f
 import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
-import { listBookings } from '@/lib/store'
+import { estimateLine, listBookings, nowMinutes } from '@/lib/store'
+import { QueueSwitch } from '@/components/QueueSwitch'
 import { headers } from 'next/headers'
 import { listRenewals } from '@/lib/prescriptions'
 import { RenewalsPanel } from '@/components/RenewalsPanel'
@@ -44,6 +45,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const seen = todays.filter((b) => b.status === 'done')
   const current = todays.find((b) => b.status === 'in_progress')
   const pending = mine.filter((b) => b.status === 'pending' && b.date >= today)
+  const estimates = estimateLine(todays, visitMinutes[doctor.id], nowMinutes())
 
   const week = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(today, i)
@@ -93,65 +95,114 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
           ))}
         </div>
 
-        <div className="dash-grid" style={{ marginTop: 56 }}>
-          <div className="stack" style={{ '--stack': '56px' } as React.CSSProperties}>
-            <div>
-              <h2 style={{ fontSize: '1.5rem' }}>{t.doctorDash.current}</h2>
+        <div className="dash-grid" style={{ marginTop: 40 }}>
+          <div className="stack" style={{ '--stack': '24px' } as React.CSSProperties}>
+            <section className={`card panel${current ? ' card-paper' : ''}`}>
+              <div className="panel-head">
+                <h2>{t.doctorDash.current}</h2>
+              </div>
               {current ? (
-                <div className="card card-paper">
-                  <div className="row between">
-                    <div>
-                      <div className="row" style={{ gap: 16 }}>
-                        <span className="ticket" style={{ fontSize: '2rem' }}>
-                          {localDigits(locale, current.ticket ?? '')}
-                        </span>
-                        <span style={{ fontSize: '1.5rem', fontWeight: 500 }}>{current.patientName}</span>
-                      </div>
-                      {current.service && <p style={{ margin: '4px 0 0' }}>{current.service.name[locale]}</p>}
-                      {current.note && <p className="caption" style={{ margin: '8px 0 0' }}>{current.note}</p>}
+                <div className="stack" style={{ '--stack': '16px' } as React.CSSProperties}>
+                  <div>
+                    <div className="row" style={{ gap: 16 }}>
+                      <span className="ticket" style={{ fontSize: '2rem' }}>
+                        {localDigits(locale, current.ticket ?? '')}
+                      </span>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 500 }}>{current.patientName}</span>
                     </div>
+                    {current.service && <p style={{ margin: '4px 0 0' }}>{current.service.name[locale]}</p>}
+                    {current.note && <p className="caption" style={{ margin: '8px 0 0' }}>{current.note}</p>}
+                  </div>
+                  <div className="row">
                     <StatusButton id={current.id} status="done" label={t.assistant.done} primary />
+                    <StatusButton id={current.id} status="approved" label={t.assistant.backToWaiting} />
                   </div>
                 </div>
               ) : (
-                <div className="card">
+                <>
                   <p className="caption" style={{ margin: '0 0 16px' }}>
                     {t.doctorDash.none}
                   </p>
                   {waiting[0] && <StatusButton id={waiting[0].id} status="in_progress" label={t.doctorDash.callNext} primary />}
-                </div>
+                </>
               )}
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.5rem' }}>{t.doctorDash.week}</h2>
+            </section>
+            <section className="card panel">
+              <div className="panel-head">
+                <h2>{t.doctorDash.week}</h2>
+              </div>
               <WeekChart data={week} today={today} locale={locale} label={t.doctorDash.week} />
-            </div>
+            </section>
           </div>
 
-          <div>
-            <h2 style={{ fontSize: '1.5rem' }}>{t.doctorDash.schedule}</h2>
-            {todays.length ? (
-              <ul className="list">
-                {todays.map((b) => (
-                  <li key={b.id} className="queue-item">
-                    <span className="ticket">{localDigits(locale, b.ticket ?? '')}</span>
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{b.patientName}</div>
-                      <div className="meta">
-                        <span>{formatTime(locale, b.time)}</span>
-                        {b.service && <span>{b.service.name[locale]}</span>}
-                      </div>
-                    </div>
-                    <div className="actions">
-                      <StatusPill status={b.status} t={t} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="caption">{t.doctorDash.noSchedule}</p>
-            )}
-          </div>
+          <section className="card panel">
+            <div className="panel-head">
+              <h2>{t.doctorDash.schedule}</h2>
+            </div>
+            <QueueSwitch
+              label={t.doctorDash.schedule}
+              tabs={[
+                {
+                  key: 'waiting',
+                  label: t.assistant.waitingTab,
+                  count: localDigits(locale, waiting.length),
+                  content: waiting.length ? (
+                    <ul className="list">
+                      {waiting.map((b) => (
+                        <li key={b.id} className="queue-item">
+                          <span className="ticket">{localDigits(locale, b.ticket ?? '')}</span>
+                          <div>
+                            <div style={{ fontWeight: 500 }}>{b.patientName}</div>
+                            <div className="meta">
+                              <span>{formatTime(locale, b.time)}</span>
+                              {estimates.get(b.id) && (
+                                <span className="estimate">
+                                  {t.assistant.estimate} {formatTime(locale, estimates.get(b.id)!)}
+                                </span>
+                              )}
+                              {b.service && <span>{b.service.name[locale]}</span>}
+                            </div>
+                          </div>
+                          <div className="actions">
+                            <StatusButton id={b.id} status="in_progress" label={t.assistant.call} />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="caption empty">{t.doctorDash.noSchedule}</p>
+                  ),
+                },
+                {
+                  key: 'finished',
+                  label: t.assistant.finishedTab,
+                  count: localDigits(locale, seen.length),
+                  content: seen.length ? (
+                    <ul className="list">
+                      {[...seen].reverse().map((b) => (
+                        <li key={b.id} className="queue-item">
+                          <span className="ticket">{localDigits(locale, b.ticket ?? '')}</span>
+                          <div>
+                            <div style={{ fontWeight: 500 }}>{b.patientName}</div>
+                            <div className="meta">
+                              <span>{formatTime(locale, b.time)}</span>
+                              {b.service && <span>{b.service.name[locale]}</span>}
+                              <StatusPill status={b.status} t={t} />
+                            </div>
+                          </div>
+                          <div className="actions">
+                            <StatusButton id={b.id} status="approved" label={t.assistant.addBack} />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="caption empty">{t.assistant.noFinished}</p>
+                  ),
+                },
+              ]}
+            />
+          </section>
         </div>
 
         <RenewalsPanel
@@ -166,7 +217,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
           t={t}
         />
 
-        <div className="card stack" style={{ '--stack': '12px', marginTop: 56 } as React.CSSProperties}>
+        <div className="card stack" style={{ '--stack': '12px', marginTop: 40 } as React.CSSProperties}>
           <p className="caption" style={{ margin: 0 }}>
             {t.settings.whatsappHint.replace('{phone}', clinic.phone)}
           </p>
