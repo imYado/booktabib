@@ -4,12 +4,11 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { setLocale } from '@/app/actions'
+import { localDigits } from '@/lib/format'
 import { localeNames, locales, type Locale } from '@/lib/i18n'
 
 export type InstallLabels = {
   title: string
-  lead: string
-  steps: string[]
   ios: { title: string; hint: string }[]
   android: { title: string; hint: string }[]
   doneTitle: string
@@ -62,7 +61,7 @@ function writeDismissed() {
   } catch {}
 }
 
-/** Opens the guide from anywhere, such as the footer link. */
+/** Opens the guide from anywhere, such as the footer link, straight at the steps in the page's language. */
 export function InstallLink({ label }: { label: string }) {
   return (
     <button type="button" className="link-button" onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}>
@@ -89,18 +88,20 @@ export function InstallGuide({ labels, locale }: { labels: InstallLabels; locale
       e.preventDefault()
       setPrompt(e as InstallPrompt)
     }
-    const onOpen = () => {
+    // Opening by itself (the first time) asks for the language; opening from the link doesn't.
+    const show = (askLanguage: boolean) => {
       if (found) setPlatform(found)
-      setStep(-1)
+      setStep(askLanguage ? -1 : 0)
       setOpen(true)
     }
+    const onLink = () => show(false)
     window.addEventListener('beforeinstallprompt', onPrompt)
-    window.addEventListener(OPEN_EVENT, onOpen)
+    window.addEventListener(OPEN_EVENT, onLink)
     let timer: ReturnType<typeof setTimeout> | undefined
-    if (found && !standalone() && Date.now() - readDismissed() > SNOOZE_MS) timer = setTimeout(onOpen, 1500)
+    if (found && !standalone() && Date.now() - readDismissed() > SNOOZE_MS) timer = setTimeout(() => show(true), 1500)
     return () => {
       window.removeEventListener('beforeinstallprompt', onPrompt)
-      window.removeEventListener(OPEN_EVENT, onOpen)
+      window.removeEventListener(OPEN_EVENT, onLink)
       clearTimeout(timer)
     }
   }, [])
@@ -171,10 +172,7 @@ export function InstallGuide({ labels, locale }: { labels: InstallLabels; locale
       <div className="ig-sheet" role="dialog" aria-modal="true" aria-labelledby="ig-title">
         <div className="ig-head">
           <img src="/icon-192.png" alt="" width={44} height={44} className="ig-app" />
-          <div>
-            <h2 id="ig-title">{labels.title}</h2>
-            <p>{labels.lead}</p>
-          </div>
+          <h2 id="ig-title">{labels.title}</h2>
         </div>
 
         <div className="ig-tabs" role="tablist">
@@ -219,9 +217,11 @@ export function InstallGuide({ labels, locale }: { labels: InstallLabels; locale
             <p className="ig-step-title">{labels.doneTitle}</p>
           ) : (
             <>
-              <p className="ig-step-num">{labels.steps[step]}</p>
-              <p className="ig-step-title">{texts[step].title}</p>
-              <p className="ig-step-hint">{texts[step].hint}</p>
+              <p className="ig-step-title">
+                <span className="ig-step-num">{localDigits(locale, step + 1)}</span>
+                {texts[step].title}
+              </p>
+              {texts[step].hint && <p className="ig-step-hint">{texts[step].hint}</p>}
             </>
           )}
         </div>
@@ -233,7 +233,7 @@ export function InstallGuide({ labels, locale }: { labels: InstallLabels; locale
         </div>
 
         <div className="ig-nav">
-          {step >= 0 ? (
+          {step > 0 ? (
             <button type="button" className="btn btn-secondary" onClick={() => setStep(step - 1)}>
               {labels.back}
             </button>

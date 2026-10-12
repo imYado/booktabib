@@ -9,8 +9,6 @@ export function InstallGuideMount({ t, locale }: { t: Dictionary; locale: Locale
       locale={locale}
       labels={{
         title: i.title,
-        lead: i.lead,
-        steps: [i.step(1), i.step(2), i.step(3), i.step(4)],
         ios: [
           { title: i.iosMore, hint: i.iosMoreHint },
           { title: i.iosShare, hint: i.iosShareHint },
