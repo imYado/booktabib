@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { bookings, notifications, prescriptions, type Prescription } from '@/db/schema'
+import { bookings, notifications, prescriptions, users, type Prescription } from '@/db/schema'
 import { addDays, daysUntil, todayISO } from './format'
 import { randomId } from './ids'
 
@@ -9,16 +9,16 @@ const digitsOnly = (column: unknown) => sql`right(regexp_replace(${column}, '[^0
 
 /**
  * Whether the patient has booked with the doctor again since the prescription was added: a booking on
- * their account, or with the same phone number, that wasn't cancelled.
+ * their account, through the renewal link they were sent, or with the same phone number, that wasn't cancelled.
  */
 async function bookedSince(p: Prescription) {
   const db = await getDb()
   const key = p.phone.replace(/\D/g, '').slice(-9)
   const who = [
+    eq(bookings.prescriptionId, p.id),
     ...(p.userId ? [eq(bookings.userId, p.userId)] : []),
     ...(key.length >= 7 ? [sql`${digitsOnly(bookings.phone)} = ${key}`] : []),
   ]
-  if (!who.length) return false
   const [row] = await db
     .select({ id: bookings.id })
     .from(bookings)
@@ -39,6 +39,17 @@ export async function listRenewals(clinicId: string, doctorId?: string): Promise
     .orderBy(asc(prescriptions.renewOn), asc(prescriptions.patientName))
   const today = todayISO()
   return Promise.all(rows.map(async (p) => ({ ...p, booked: await bookedSince(p), daysLeft: daysUntil(today, p.renewOn) })))
+}
+
+/** Whether an assistant looks after this doctor's patients, so the desk sends the renewal reminders rather than the doctor. */
+export async function deskSendsRenewals(clinicId: string, doctorId: string) {
+  const db = await getDb()
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.role, 'assistant'), eq(users.clinicId, clinicId), or(isNull(users.doctorId), eq(users.doctorId, doctorId))))
+    .limit(1)
+  return !!row
 }
 
 export async function getPrescription(id: string) {

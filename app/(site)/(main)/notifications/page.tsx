@@ -41,7 +41,7 @@ export default async function NotificationsPage() {
   const href = (item: Notification) => {
     if (item.prescriptionId) {
       const doctorId = scripts.get(item.prescriptionId)?.doctorId
-      return doctorId ? `/doctors/${doctorId}` : `/clinics/${item.clinicId}`
+      return doctorId ? `/doctors/${doctorId}?rx=${item.prescriptionId}` : `/clinics/${item.clinicId}`
     }
     return item.kind === 'done' ? `/clinics/${item.clinicId}` : item.bookingId ? `/bookings/${item.bookingId}` : '/account'
   }

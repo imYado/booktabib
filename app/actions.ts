@@ -14,6 +14,7 @@ import { isLocale, LOCALE_COOKIE } from '@/lib/i18n'
 import { todayISO } from '@/lib/format'
 import { randomId } from '@/lib/ids'
 import { hashPassword, isWeakPassword, verifyPasswordOrDummy } from '@/lib/password'
+import { getPrescription } from '@/lib/prescriptions'
 import { clearLimit, clientIp, hit, isLimited, overLimit } from '@/lib/rate-limit'
 import { setClinicAccent, setDoctorWhatsapp, setScreenLocale, setVisitMinutes } from '@/lib/settings'
 import { addWalkIn, changeTime, claimBooking, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
@@ -41,7 +42,9 @@ export async function requestBooking(formData: FormData) {
   const patientName = text(formData, 'patientName', 80)
   const phone = text(formData, 'phone', 30)
   const note = text(formData, 'note', 300)
-  const back = `/doctors/${encodeURIComponent(doctorId)}?day=${encodeURIComponent(date)}`
+  const rx = text(formData, 'rx', 16)
+  const renewal = /^[A-Z2-9]{16}$/.test(rx) ? rx : ''
+  const back = `/doctors/${encodeURIComponent(doctorId)}?day=${encodeURIComponent(date)}${renewal ? `&rx=${renewal}` : ''}`
 
   const doctor = getDoctor(doctorId)
   if (!doctor) redirect('/clinics')
@@ -60,9 +63,12 @@ export async function requestBooking(formData: FormData) {
   }
 
   const user = await getCurrentUser()
+  // Booked through a renewal link: tied to that prescription so the doctor's return rate counts it.
+  const prescription = renewal ? await getPrescription(renewal) : undefined
+  const prescriptionId = prescription?.doctorId === doctor.id ? prescription.id : null
   let booking: Awaited<ReturnType<typeof createBooking>>
   try {
-    booking = await createBooking({ doctorId, date, time, patientName, phone, note, service, userId: user?.id ?? null })
+    booking = await createBooking({ doctorId, date, time, patientName, phone, note, service, userId: user?.id ?? null, prescriptionId })
   } catch (err) {
     if (err instanceof SlotTakenError) redirect(`${back}&error=taken`)
     throw err
