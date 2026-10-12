@@ -1,0 +1,1 @@
+ALTER TABLE "clinic_settings" ADD COLUMN "screen_locale" text DEFAULT 'ar' NOT NULL;

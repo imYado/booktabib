@@ -15,7 +15,7 @@ import { addDays, formatDay, formatTime, localDigits, todayISO } from '@/lib/for
 import { listRenewals } from '@/lib/prescriptions'
 import { RenewalsPanel } from '@/components/RenewalsPanel'
 import { canManageClinic, requireUser } from '@/lib/auth'
-import { getClinicAccent, getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
+import { getClinicAccent, getDoctorWhatsapps, getScreenLocale, getVisitMinutes } from '@/lib/settings'
 import { getI18n } from '@/lib/locale'
 import { estimateLine, listBookings, nowMinutes, type Booking } from '@/lib/store'
 
@@ -36,10 +36,11 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   // An assistant tied to one doctor only sees that doctor's patients.
   const doctorId = user.role === 'assistant' ? (user.doctorId ?? undefined) : undefined
   const myDoctors = doctorsAt(clinic.id).filter((d) => !doctorId || d.id === doctorId)
-  const [pending, queue, accent, whatsapps, visitMinutes, renewals, recent] = await Promise.all([
+  const [pending, queue, accent, screenLocale, whatsapps, visitMinutes, renewals, recent] = await Promise.all([
     listBookings({ clinicId: clinic.id, doctorId, status: 'pending', fromDate: today }),
     listBookings({ clinicId: clinic.id, doctorId, date: today, status: ['approved', 'in_progress', 'done', 'cancelled'] }),
     getClinicAccent(clinic.id),
+    getScreenLocale(clinic.id),
     getDoctorWhatsapps(myDoctors.map((d) => d.id)),
     getVisitMinutes(myDoctors.map((d) => d.id)),
     listRenewals(clinic.id, doctorId),
@@ -251,6 +252,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
           doctors={myDoctors}
           whatsapps={whatsapps}
           visitMinutes={visitMinutes}
+          screenLocale={screenLocale}
           canEditAccent={canManageClinic(user, clinic.id)}
           locale={locale}
           t={t}

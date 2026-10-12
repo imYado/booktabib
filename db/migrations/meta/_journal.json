@@ -92,6 +92,13 @@
       "when": 1791797780499,
       "tag": "0012_visit_minutes",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791803530496,
+      "tag": "0013_screen_locale",
+      "breakpoints": true
     }
   ]
 }
