@@ -11,7 +11,7 @@ import { accentStyle } from '@/lib/accents'
 import { getCurrentUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
 import { contactNumberFor, getClinicAccent } from '@/lib/settings'
-import { estimatedTime, getBookingByLiveToken, queuePosition } from '@/lib/store'
+import { getBookingByLiveToken, lineEstimates, queuePosition } from '@/lib/store'
 
 // The patient's live queue page. Anyone holding the link can open it, so it shows only
 // the patient's name, their number, the line and how to reach the clinic: no phone
@@ -57,7 +57,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
   const isToday = booking.date === today
   const active = booking.status === 'pending' || booking.status === 'approved' || booking.status === 'in_progress'
   const position = booking.status === 'approved' && isToday ? await queuePosition(booking) : null
-  const estimate = position ? estimatedTime(booking, position.ahead) : null
+  const estimate = position ? ((await lineEstimates(booking.doctorId, booking.date)).get(booking.id) ?? null) : null
   const { lat, lng } = clinic?.location ?? { lat: 0, lng: 0 }
   // WhatsApp goes to the doctor's own number when the clinic set one, otherwise to the clinic.
   const contact = await contactNumberFor(booking.doctorId)

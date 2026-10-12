@@ -3,9 +3,10 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, ne, sql, type SQL } from '
 import { getDb } from '@/db'
 import { bookings, notifications, type BookedService, type Booking, type BookingStatus } from '@/db/schema'
 import { getCatalog } from './catalog'
-import { dailySlots, isWorkingDay, MINUTES_PER_PATIENT } from './data'
+import { dailySlots, isWorkingDay } from './data'
 import { CLINIC_TIME_ZONE, todayISO } from './format'
 import { randomId } from './ids'
+import { getVisitMinutes } from './settings'
 
 export type { Booking, BookingStatus }
 
@@ -210,14 +211,17 @@ export async function reorderQueue(ordered: Booking[]) {
   for (const doctorId of new Set(ordered.map((b) => b.doctorId))) await remindArrivals(doctorId)
 }
 
-/** A patient added at the desk: approved straight away, at the end of today's line for their doctor. */
-export async function addWalkIn(input: { doctorId: string; patientName: string; phone: string; note: string }) {
+/**
+ * A patient added at the desk, approved straight away. Without a time they go to the end of today's
+ * line; with one (say 09:30) they go into the line at that time, behind anyone already booked then.
+ */
+export async function addWalkIn(input: { doctorId: string; patientName: string; phone: string; note: string; time?: string }) {
   const doctor = (await getCatalog()).getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
   const date = todayISO()
-  const time = nowHHMM()
+  const time = input.time || nowHHMM()
   const line = await listBookings({ doctorId: doctor.id, date, status: ['approved', 'in_progress'] })
-  const position = Math.max(minutes(time), ...line.map(queueKey)) + 1
+  const position = input.time ? minutes(input.time) + 0.5 : Math.max(minutes(time), ...line.map(queueKey)) + 1
   const db = await getDb()
   const [row] = await db
     .insert(bookings)
@@ -225,6 +229,25 @@ export async function addWalkIn(input: { doctorId: string; patientName: string; 
     .returning()
   await setStatus(row, 'approved')
   return row
+}
+
+/**
+ * Moves a waiting or requested booking to another time the same day; the line follows the new time.
+ * If another patient already holds that slot both keep it, and this one stops holding a slot of its own.
+ */
+export async function changeTime(booking: Booking, time: string, actorId?: string) {
+  if (booking.time === time || (booking.status !== 'pending' && booking.status !== 'approved')) return
+  const db = await getDb()
+  try {
+    await db.update(bookings).set({ time, position: null }).where(eq(bookings.id, booking.id))
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err
+    await db.update(bookings).set({ time, position: null, walkIn: true }).where(eq(bookings.id, booking.id))
+  }
+  if (booking.userId && booking.userId !== actorId) {
+    await db.insert(notifications).values({ id: randomId(16), userId: booking.userId, bookingId: booking.id, clinicId: booking.clinicId, kind: 'moved', ticket: booking.ticket, time })
+  }
+  if (booking.date === todayISO()) await remindArrivals(booking.doctorId)
 }
 
 export async function updateContact(booking: Booking, patientName: string, phone: string) {
@@ -258,10 +281,44 @@ export async function claimBooking(token: string, user: { id: string; phone: str
   return row ? 'claimed' : 'mismatch'
 }
 
-/** When a waiting patient will likely be seen: their own time, or later when `ahead` people are before them. */
-export function estimatedTime(booking: Pick<Booking, 'time'>, ahead: number) {
-  const m = Math.round(Math.max(minutes(booking.time), minutes(nowHHMM()) + ahead * MINUTES_PER_PATIENT) / 5) * 5
-  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m) % 60).padStart(2, '0')}`
+
+/** Minutes since midnight at the clinic for a moment in time. */
+function clockMinutes(ms: number) {
+  return minutes(new Intl.DateTimeFormat('en-GB', { timeZone: CLINIC_TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms)))
+}
+
+/** Minutes since midnight at the clinic right now. */
+export function nowMinutes() {
+  return minutes(nowHHMM())
+}
+
+/**
+ * When each waiting patient in a doctor's line will likely be seen, in line order. The doctor takes
+ * `visit` minutes per patient and nobody is seen before their place in the line (their booked time,
+ * or the time of the place they were dragged into). `now` is minutes since midnight, 0 for another day.
+ */
+export function estimateLine(line: Booking[], visit: number, now: number): Map<string, string> {
+  const serving = line.find((b) => b.status === 'in_progress')
+  let free = now
+  if (serving) free = Math.max(now, serving.calledAt ? clockMinutes(serving.calledAt) + visit : now + visit / 2)
+  const out = new Map<string, string>()
+  for (const b of line) {
+    if (b.status !== 'approved') continue
+    const start = Math.max(free, queueKey(b))
+    out.set(b.id, hhmm(Math.round(start / 5) * 5))
+    free = start + visit
+  }
+  return out
+}
+
+/** Estimated times for everyone waiting in a doctor's line on a day (see estimateLine). */
+export async function lineEstimates(doctorId: string, date: string) {
+  const [line, visit] = await Promise.all([
+    listBookings({ doctorId, date, status: ['approved', 'in_progress'] }),
+    getVisitMinutes([doctorId]),
+  ])
+  return estimateLine(line, visit[doctorId], date === todayISO() ? minutes(nowHHMM()) : 0)
 }
 
 /** How many waiting patients get the "time to come in" reminder: the next ones in line. */
@@ -273,7 +330,8 @@ const ARRIVE_AHEAD = 2
  */
 export async function remindArrivals(doctorId: string) {
   const today = todayISO()
-  const line = await listBookings({ doctorId, date: today, status: ['approved', 'in_progress'] })
+  const [line, visit] = await Promise.all([listBookings({ doctorId, date: today, status: ['approved', 'in_progress'] }), getVisitMinutes([doctorId])])
+  const estimates = estimateLine(line, visit[doctorId], minutes(nowHHMM()))
   const serving = line.some((b) => b.status === 'in_progress') ? 1 : 0
   const near = line
     .filter((b) => b.status === 'approved')
@@ -286,7 +344,7 @@ export async function remindArrivals(doctorId: string) {
     .from(notifications)
     .where(and(eq(notifications.kind, 'arrive'), isNotNull(notifications.bookingId), inArray(notifications.bookingId, near.map(({ b }) => b.id))))
   const done = new Set(told.map((r) => r.bookingId))
-  for (const { b, ahead } of near) {
+  for (const { b } of near) {
     if (done.has(b.id)) continue
     await db.insert(notifications).values({
       id: randomId(16),
@@ -295,7 +353,7 @@ export async function remindArrivals(doctorId: string) {
       clinicId: b.clinicId,
       kind: 'arrive',
       ticket: b.ticket,
-      time: estimatedTime(b, ahead),
+      time: estimates.get(b.id) ?? b.time,
     })
   }
 }

@@ -31,6 +31,7 @@ export default async function NotificationsPage() {
     if (item.kind === 'renew3') return n.renew3(clinic, renewDate)
     if (item.kind === 'renewDay') return n.renewDay(clinic)
     if (item.kind === 'arrive') return n.arrive(clinic, item.time ? formatTime(locale, item.time) : '')
+    if (item.kind === 'moved') return n.moved(clinic, item.time ? formatTime(locale, item.time) : '')
     if (item.kind === 'approved') return n.approved(clinic, item.ticket)
     if (item.kind === 'turn') return n.turn(clinic)
     if (item.kind === 'cancelled') return n.cancelled(clinic)

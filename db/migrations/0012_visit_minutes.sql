@@ -1,0 +1,1 @@
+ALTER TABLE "doctor_settings" ADD COLUMN "visit_minutes" integer DEFAULT 15 NOT NULL;

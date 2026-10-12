@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Avatar } from '@/components/Avatar'
-import { WhatsappField } from '@/components/ClinicSettings'
+import { VisitMinutesField, WhatsappField } from '@/components/ClinicSettings'
 import { PickerForm } from '@/components/PickerForm'
 import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
@@ -9,7 +9,7 @@ import { getCatalog } from '@/lib/catalog'
 import { addDays, formatDay, formatNumber, formatTime, localDigits, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
-import { getDoctorWhatsapps } from '@/lib/settings'
+import { getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
 import { listBookings } from '@/lib/store'
 import { headers } from 'next/headers'
 import { listRenewals } from '@/lib/prescriptions'
@@ -30,9 +30,10 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const clinic = getClinic(doctor.clinicId)!
   const today = todayISO()
 
-  const [mine, whatsapps, renewals, recent] = await Promise.all([
+  const [mine, whatsapps, visitMinutes, renewals, recent] = await Promise.all([
     listBookings({ doctorId: doctor.id, fromDate: today }),
     getDoctorWhatsapps([doctor.id]),
+    getVisitMinutes([doctor.id]),
     listRenewals(clinic.id, doctor.id),
     listBookings({ doctorId: doctor.id, fromDate: addDays(today, -90), status: ['pending', 'approved', 'in_progress', 'done'] }),
   ])
@@ -170,6 +171,10 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
             {t.settings.whatsappHint.replace('{phone}', clinic.phone)}
           </p>
           <WhatsappField doctor={doctor} value={whatsapps[doctor.id] ?? ''} label={t.settings.myWhatsapp} t={t} />
+          <p className="caption" style={{ margin: '12px 0 0' }}>
+            {t.settings.visitHint}
+          </p>
+          <VisitMinutesField doctor={doctor} value={visitMinutes[doctor.id]} label={t.settings.myVisit} t={t} />
         </div>
       </div>
     </section>
