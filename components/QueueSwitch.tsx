@@ -26,7 +26,7 @@ export function QueueSwitch({ tabs, label }: { tabs: Tab[]; label: string }) {
             onClick={() => setActive(t.key)}
           >
             {t.label}
-            <span className="switch-count">{t.count}</span>
+            {t.count && <span className="switch-count">{t.count}</span>}
           </button>
         ))}
       </div>

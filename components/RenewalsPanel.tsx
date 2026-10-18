@@ -10,7 +10,8 @@ import { RenewalWhatsapp } from './RenewalWhatsapp'
 
 /**
  * Prescription renewals on the desk and the doctor's dashboard: who needs a new prescription in the
- * next 7 days, whether they were told, and a form to add one.
+ * next 7 days, whether they were told, and a form to add one. Where the clinic has an assistant, the
+ * doctor only adds dates (`sends` off) and the desk tells the patients.
  */
 export function RenewalsPanel({
   rows,
@@ -20,6 +21,7 @@ export function RenewalsPanel({
   origin,
   back,
   flag,
+  sends = true,
   locale,
   t,
 }: {
@@ -30,6 +32,7 @@ export function RenewalsPanel({
   origin: string
   back: string
   flag?: string
+  sends?: boolean
   locale: Locale
   t: Dictionary
 }) {
@@ -43,7 +46,8 @@ export function RenewalsPanel({
   const row = (p: RenewalRow) => {
     const date = formatDay(locale, p.renewOn, { weekday: 'long', month: 'long' })
     const phone = whatsappNumber(p.phone)
-    const message = r.whatsappText(p.patientName, clinicName, date, `${origin}/doctors/${p.doctorId}`)
+    // The link carries the prescription, so booking through it counts as a return even from a new account.
+    const message = r.whatsappText(p.patientName, clinicName, date, `${origin}/doctors/${p.doctorId}?rx=${p.id}`)
     return (
       <li key={p.id} className="renewal">
         <div className="renewal-main">
@@ -60,27 +64,30 @@ export function RenewalsPanel({
             {(!p.userId || p.appSentAt || !p.booked) && (
               <span className={p.appSentAt ? 'flag flag-on' : 'flag'}>{!p.userId ? r.noAccount : p.appSentAt ? r.appSent : r.appLater}</span>
             )}
+            {!sends && p.notifiedAt && <span className="flag flag-on">{r.toldByDesk}</span>}
             {p.booked && <span className="flag flag-on">{r.booked}</span>}
           </div>
         </div>
-        <div className="row renewal-actions">
-          <form action={toggleRenewalNotified}>
-            <input type="hidden" name="id" value={p.id} />
-            <button type="submit" className={p.notifiedAt ? 'check is-on' : 'check'} aria-pressed={!!p.notifiedAt}>
-              <span className="check-box" aria-hidden="true">
-                {p.notifiedAt && <Icon name="check" size={14} />}
-              </span>
-              {r.notified}
-            </button>
-          </form>
-          {phone.length >= 8 && <RenewalWhatsapp id={p.id} href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} label={r.whatsapp} />}
-          <form action={closeRenewal}>
-            <input type="hidden" name="id" value={p.id} />
-            <button type="submit" className="btn btn-secondary btn-sm">
-              {r.renewed}
-            </button>
-          </form>
-        </div>
+        {sends && (
+          <div className="row renewal-actions">
+            <form action={toggleRenewalNotified}>
+              <input type="hidden" name="id" value={p.id} />
+              <button type="submit" className={p.notifiedAt ? 'check is-on' : 'check'} aria-pressed={!!p.notifiedAt}>
+                <span className="check-box" aria-hidden="true">
+                  {p.notifiedAt && <Icon name="check" size={14} />}
+                </span>
+                {r.notified}
+              </button>
+            </form>
+            {phone.length >= 8 && <RenewalWhatsapp id={p.id} href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} label={r.whatsapp} />}
+            <form action={closeRenewal}>
+              <input type="hidden" name="id" value={p.id} />
+              <button type="submit" className="btn btn-secondary btn-sm">
+                {r.renewed}
+              </button>
+            </form>
+          </div>
+        )}
       </li>
     )
   }
@@ -101,7 +108,7 @@ export function RenewalsPanel({
     <section id="renewals" className="renewals card panel">
       <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{r.title}</h2>
       <p className="caption" style={{ margin: '4px 0 16px' }}>
-        {r.lead}
+        {sends ? r.lead : r.deskSends}
       </p>
       {flag === 'added' && (
         <p className="saved-note" role="status">

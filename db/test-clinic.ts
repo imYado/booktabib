@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { dailySlots, isWorkingDay } from '../lib/data'
 import { addDays, todayISO } from '../lib/format'
 import { randomId } from '../lib/ids'
@@ -72,16 +72,107 @@ const earlier = (a: Date, b: Date) => (a < b ? a : b)
 
 export async function seedTestClinic(db: DB) {
   const existing = await db.select({ id: clinics.id }).from(clinics).where(eq(clinics.id, TEST_CLINIC_ID))
-  if (existing.length) return false
-
-  try {
-    await insertAll(db)
-  } catch (err) {
-    // Neon's HTTP driver has no transactions, so undo a half-finished run; the next deploy tries again.
-    await removeTestClinic(db).catch(() => {})
-    throw err
+  if (!existing.length) {
+    try {
+      await insertAll(db)
+    } catch (err) {
+      // Neon's HTTP driver has no transactions, so undo a half-finished run; the next deploy tries again.
+      await removeTestClinic(db).catch(() => {})
+      throw err
+    }
   }
-  return true
+  // Also fills in a clinic seeded before the doctor's charts existed.
+  await addChartData(db)
+  return !existing.length
+}
+
+/**
+ * Data for the doctor's charts: how long each finished visit took, and patients whose prescription came
+ * due and who came back through the renewal link. Only touches what is still missing, so it can run on
+ * every deploy.
+ */
+async function addChartData(db: DB) {
+  const rand = generator(714)
+  const minutesFor: Record<string, [number, number]> = { [DR_REZAN]: [9, 12], [DR_LANA]: [12, 14] }
+
+  const untimed = await db
+    .select({ id: bookings.id, doctorId: bookings.doctorId, date: bookings.date, time: bookings.time, position: bookings.position })
+    .from(bookings)
+    .where(and(eq(bookings.clinicId, TEST_CLINIC_ID), eq(bookings.status, 'done'), isNull(bookings.finishedAt)))
+  if (untimed.length) {
+    const values = untimed.map((b) => {
+      const time = b.position === null ? b.time : `${String(Math.floor(b.position / 60)).padStart(2, '0')}:${String(Math.floor(b.position % 60)).padStart(2, '0')}`
+      const called = at(b.date, time).getTime() + Math.floor(rand() * 15) * 60_000
+      const [shortest, spread] = minutesFor[b.doctorId] ?? [10, 10]
+      const finished = called + (shortest + Math.floor(rand() * spread)) * 60_000 + Math.floor(rand() * 60) * 1000
+      return sql`(${b.id}, ${called}::bigint, ${finished}::bigint)`
+    })
+    await db.execute(sql`
+      update ${bookings} set called_at = v.called, finished_at = v.finished
+      from (values ${sql.join(values, sql`, `)}) as v(id, called, finished)
+      where ${bookings.id} = v.id`)
+  }
+
+  // Patients whose prescription came due since the clinic opened. Most came back through the link.
+  const [marker] = await db
+    .select({ id: prescriptions.id })
+    .from(prescriptions)
+    .where(and(eq(prescriptions.clinicId, TEST_CLINIC_ID), eq(prescriptions.patientName, 'Dilan Omer')))
+  if (marker) return
+  const today = todayISO()
+  const [{ opened }] = await db.select({ opened: clinics.createdAt }).from(clinics).where(eq(clinics.id, TEST_CLINIC_ID))
+  const [assistant] = await db.select({ id: users.id }).from(users).where(eq(users.email, TEST_ACCOUNTS.assistant))
+  const due = [
+    { name: 'Dilan Omer', doctorId: DR_REZAN, came: true },
+    { name: 'هدى صالح', doctorId: DR_REZAN, came: true },
+    { name: 'Saman Aziz', doctorId: DR_LANA, came: true },
+    { name: 'Bnar Jalal', doctorId: DR_REZAN, came: false },
+    { name: 'كريم عباس', doctorId: DR_LANA, came: true },
+    { name: 'Hana Rashid', doctorId: DR_REZAN, came: true },
+    { name: 'Peshraw Ali', doctorId: DR_LANA, came: false },
+    { name: 'ليلى منصور', doctorId: DR_REZAN, came: true },
+    { name: 'Rozh Fuad', doctorId: DR_LANA, came: true },
+    { name: 'Ari Hassan', doctorId: DR_REZAN, came: false },
+  ]
+  const openedDay = opened.toISOString().slice(0, 10)
+  for (const [i, p] of due.entries()) {
+    const added = addDays(openedDay, i % 4)
+    const renewOn = [addDays(added, 6 + (i % 5)), addDays(today, -1 - (i % 3))].sort()[0]
+    if (renewOn >= today) continue
+    const id = randomId(16)
+    const phone = `0751${String(Math.floor(rand() * 10_000_000)).padStart(7, '0')}`
+    await db.insert(prescriptions).values({
+      id,
+      clinicId: TEST_CLINIC_ID,
+      doctorId: p.doctorId,
+      patientName: p.name,
+      phone,
+      renewOn,
+      createdBy: assistant?.id ?? null,
+      createdAt: at(added, '12:30'),
+      notifiedAt: at(addDays(renewOn, -2), '10:00'),
+      closedAt: p.came ? at(renewOn, '13:00') : null,
+    })
+    if (!p.came) continue
+    // Their return visit: one of the doctor's bookings from around the renewal date, now theirs.
+    const [visit] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.clinicId, TEST_CLINIC_ID),
+          eq(bookings.doctorId, p.doctorId),
+          ne(bookings.status, 'cancelled'),
+          isNull(bookings.userId),
+          isNull(bookings.prescriptionId),
+          gte(bookings.date, addDays(renewOn, -3)),
+          gt(bookings.createdAt, at(added, '12:30')),
+        ),
+      )
+      .orderBy(asc(bookings.date), asc(bookings.time))
+      .limit(1)
+    if (visit) await db.update(bookings).set({ prescriptionId: id, patientName: p.name, phone }).where(eq(bookings.id, visit.id))
+  }
 }
 
 export async function removeTestClinic(db: DB) {

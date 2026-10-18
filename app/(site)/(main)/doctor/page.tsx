@@ -4,7 +4,9 @@ import { VisitMinutesField, WhatsappField } from '@/components/ClinicSettings'
 import { PickerForm } from '@/components/PickerForm'
 import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
-import { WeekChart } from '@/components/WeekChart'
+import { BarChart } from '@/components/BarChart'
+import { addRenewal } from '@/app/prescription-actions'
+import { Icon } from '@/components/Icon'
 import { getCatalog } from '@/lib/catalog'
 import { addDays, formatDay, formatNumber, formatTime, localDigits, todayISO } from '@/lib/format'
 import { requireUser } from '@/lib/auth'
@@ -13,7 +15,9 @@ import { getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
 import { estimateLine, listBookings, nowMinutes } from '@/lib/store'
 import { QueueSwitch } from '@/components/QueueSwitch'
 import { headers } from 'next/headers'
-import { listRenewals } from '@/lib/prescriptions'
+import { deskSendsRenewals, listRenewals } from '@/lib/prescriptions'
+import { returnRates, visitLengths } from '@/lib/analytics'
+import { isWorkingDay } from '@/lib/data'
 import { RenewalsPanel } from '@/components/RenewalsPanel'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,13 +35,21 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const clinic = getClinic(doctor.clinicId)!
   const today = todayISO()
 
-  const [mine, whatsapps, visitMinutes, renewals, recent] = await Promise.all([
+  // The last 7 working days, up to today, for the visit length chart.
+  const pastDays: string[] = []
+  for (let i = 0; pastDays.length < 7 && i < 14; i++) if (isWorkingDay(addDays(today, -i))) pastDays.unshift(addDays(today, -i))
+
+  const [mine, whatsapps, visitMinutes, renewals, recent, lengths, returns, deskSends] = await Promise.all([
     listBookings({ doctorId: doctor.id, fromDate: today }),
     getDoctorWhatsapps([doctor.id]),
     getVisitMinutes([doctor.id]),
     listRenewals(clinic.id, doctor.id),
     listBookings({ doctorId: doctor.id, fromDate: addDays(today, -90), status: ['pending', 'approved', 'in_progress', 'done'] }),
+    visitLengths(doctor.id, pastDays),
+    returnRates(doctor.id, today),
+    deskSendsRenewals(clinic.id, doctor.id),
   ])
+  const back = user.role === 'admin' ? `/doctor?doctor=${doctor.id}` : '/doctor'
   const h = await headers()
   const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}`
   const todays = mine.filter((b) => b.date === today && b.status !== 'pending' && b.status !== 'cancelled')
@@ -47,10 +59,31 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const pending = mine.filter((b) => b.status === 'pending' && b.date >= today)
   const estimates = estimateLine(todays, visitMinutes[doctor.id], nowMinutes())
 
+  const d = t.doctorDash
+  const n = (value: number) => formatNumber(locale, value)
+  const weekday = (date: string) => formatDay(locale, date, { day: undefined, month: undefined })
   const week = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(today, i)
-    return { date, count: mine.filter((b) => b.date === date && b.status !== 'cancelled').length }
+    const count = mine.filter((b) => b.date === date && b.status !== 'cancelled').length
+    return { key: date, label: weekday(date), value: count, text: n(count), highlight: date === today }
   })
+  const visitBars = lengths.days.map((day) => ({
+    key: day.date,
+    label: weekday(day.date),
+    value: day.average ?? 0,
+    text: day.average === null ? '–' : d.minutes(n(day.average)),
+    highlight: day.date === today,
+  }))
+  // Weeks before the first prescription came due are left off, keeping at least four.
+  const firstDue = returns.weeks.findIndex((w) => w.due > 0)
+  const returnWeeks = returns.weeks.slice(Math.min(Math.max(firstDue, 0), returns.weeks.length - 4))
+  const returnBars = returnWeeks.map((w, i) => ({
+    key: w.start,
+    label: formatDay(locale, w.start, { weekday: undefined }),
+    value: w.rate ?? 0,
+    text: w.rate === null ? '–' : d.percent(n(w.rate)),
+    highlight: i === returnWeeks.length - 1,
+  }))
 
   const stats = [
     { label: t.doctorDash.patientsToday, value: todays.length },
@@ -117,6 +150,16 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                     <StatusButton id={current.id} status="done" label={t.assistant.done} primary />
                     <StatusButton id={current.id} status="approved" label={t.assistant.backToWaiting} />
                   </div>
+                  <form action={addRenewal} className="row quick-renewal">
+                    <input type="hidden" name="bookingId" value={current.id} />
+                    <input type="hidden" name="back" value={back} />
+                    <label htmlFor="quick-renew">{t.renew.quickAdd}</label>
+                    <input id="quick-renew" name="renewOn" type="date" className="input" required min={today} max={addDays(today, 366)} defaultValue={addDays(today, 30)} dir="ltr" />
+                    <button type="submit" className="btn btn-secondary btn-sm">
+                      <Icon name="calendar" size={14} />
+                      {t.renew.quickButton}
+                    </button>
+                  </form>
                 </div>
               ) : (
                 <>
@@ -129,9 +172,51 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
             </section>
             <section className="card panel">
               <div className="panel-head">
-                <h2>{t.doctorDash.week}</h2>
+                <h2>{d.numbers}</h2>
               </div>
-              <WeekChart data={week} today={today} locale={locale} label={t.doctorDash.week} />
+              <QueueSwitch
+                label={d.numbers}
+                tabs={[
+                  {
+                    key: 'appointments',
+                    label: d.viewAppointments,
+                    count: '',
+                    content: (
+                      <>
+                        <p className="caption chart-lead">{d.weekLead}</p>
+                        <BarChart data={week} locale={locale} label={d.week} />
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'visits',
+                    label: d.viewVisits,
+                    count: '',
+                    content: (
+                      <>
+                        <p className="caption chart-lead">
+                          {lengths.average === null
+                            ? d.visitsNone(n(visitMinutes[doctor.id]))
+                            : d.visitsLead(n(lengths.average), n(lengths.visits), n(visitMinutes[doctor.id]))}
+                        </p>
+                        <BarChart data={visitBars} locale={locale} label={d.viewVisits} />
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'returns',
+                    label: d.viewReturns,
+                    count: '',
+                    content: (
+                      <>
+                        <p className="caption chart-lead">{returns.rate === null ? d.returnsNone : d.returnsLead(n(returns.rate), n(returns.returned), n(returns.due))}</p>
+                        <BarChart data={returnBars} locale={locale} label={d.viewReturns} />
+                        <p className="caption chart-lead">{d.returnsHow}</p>
+                      </>
+                    ),
+                  },
+                ]}
+              />
             </section>
           </div>
 
@@ -211,8 +296,9 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
           recent={recent.filter((b) => b.date <= addDays(today, 30))}
           clinicName={clinic.name[locale]}
           origin={origin}
-          back={user.role === 'admin' ? `/doctor?doctor=${doctor.id}` : '/doctor'}
+          back={back}
           flag={query.renew}
+          sends={!deskSends}
           locale={locale}
           t={t}
         />
