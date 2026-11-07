@@ -38,7 +38,16 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
     specialties: c.specialties.filter(isSpecialty),
     about: fillLocalized(c.about),
     imageId: c.imageId,
-    raw: { name: localizedOrBlank(c.name), address: localizedOrBlank(c.address), about: localizedOrBlank(c.about) },
+    hours: Object.values(c.hours ?? {}).some((v) => v?.trim()) ? fillLocalized(c.hours) : null,
+    gallery: c.gallery ?? [],
+    info: (c.info ?? []).map((i) => ({ title: fillLocalized(i.title), body: fillLocalized(i.body) })),
+    raw: {
+      name: localizedOrBlank(c.name),
+      address: localizedOrBlank(c.address),
+      about: localizedOrBlank(c.about),
+      hours: localizedOrBlank(c.hours),
+      info: (c.info ?? []).map((i) => ({ title: localizedOrBlank(i.title), body: localizedOrBlank(i.body) })),
+    },
   }))
   const doctors: Doctor[] = doctorRows.map((d) => {
     const honorific = isHonorific(d.honorific) ? d.honorific : 'none'

@@ -92,6 +92,9 @@ export const cities: Record<CityId, Localized> = {
   baghdad: { en: 'Baghdad', ar: 'بغداد', ckb: 'بەغدا' },
 }
 
+/** How many photos a clinic's gallery can hold. */
+export const MAX_GALLERY = 12
+
 export type Clinic = {
   id: string
   name: Localized
@@ -106,8 +109,14 @@ export type Clinic = {
   specialties: SpecialtyId[]
   about: Localized
   imageId: string | null
+  /** Opening hours as the clinic wrote them, or null to show the site's default hours. */
+  hours: Localized | null
+  /** More photos of the clinic (image ids), in order. */
+  gallery: string[]
+  /** Extra facts, each a short title and text, such as parking or insurance. */
+  info: { title: Localized; body: Localized }[]
   /** Texts exactly as the admin typed them; the ones above fill empty languages from another. */
-  raw: { name: Localized; address: Localized; about: Localized }
+  raw: { name: Localized; address: Localized; about: Localized; hours: Localized; info: { title: Localized; body: Localized }[] }
 }
 
 export type Doctor = {

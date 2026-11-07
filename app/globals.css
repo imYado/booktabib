@@ -2278,3 +2278,349 @@ dl.details dd {
   border-radius: 50%;
   background: #fff;
 }
+
+/* Clinic page: one doctor up front, "Good to know", photo gallery and map */
+
+.solo-doctor {
+  display: grid;
+  gap: 24px;
+  align-items: center;
+  padding: 28px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+@media (min-width: 600px) {
+  .solo-doctor {
+    grid-template-columns: auto 1fr;
+    gap: 32px;
+    padding: 32px;
+  }
+}
+.solo-doctor-photo {
+  display: block;
+  width: fit-content;
+  border-radius: 999px;
+}
+.solo-doctor-photo .avatar {
+  border: 1px solid var(--rule);
+}
+.solo-doctor-photo .avatar svg {
+  width: 56px;
+  height: 56px;
+}
+@media (max-width: 599px) {
+  .solo-doctor-photo .avatar {
+    width: 112px !important;
+    height: 112px !important;
+  }
+}
+.solo-doctor-name {
+  font-size: clamp(1.6rem, 3.4vw, 2.25rem);
+  margin: 4px 0 8px;
+}
+.solo-doctor-name a {
+  color: inherit;
+  text-decoration: none;
+}
+.solo-doctor-name a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+.solo-doctor-bio {
+  margin: 16px 0 0;
+  color: var(--caption);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.info-list {
+  margin: 0;
+  border-top: 1px solid var(--rule);
+}
+.info-list > div {
+  display: grid;
+  gap: 4px;
+  padding-block: 16px;
+  border-bottom: 1px solid var(--rule);
+}
+@media (min-width: 600px) {
+  .info-list > div {
+    grid-template-columns: minmax(140px, 1fr) 2fr;
+    gap: 24px;
+  }
+}
+.info-list dt {
+  font-weight: 500;
+}
+.info-list dd {
+  margin: 0;
+  color: var(--caption);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.gallery-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+/* On phones an odd photo out is avoided by showing the first one across the full width. */
+@media (max-width: 767px) {
+  .gallery-grid.is-odd > li:first-child {
+    grid-column: span 2;
+  }
+  .gallery-grid.is-odd > li:first-child .gallery-thumb {
+    aspect-ratio: 16 / 9;
+  }
+}
+@media (min-width: 768px) {
+  .gallery-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  /* The first photo is shown large when there are a few. */
+  .gallery-grid.has-feature > li:first-child {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+  .gallery-grid[data-count='1'],
+  .gallery-grid[data-count='2'] {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.gallery-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--paper);
+  cursor: zoom-in;
+}
+.gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s var(--ease), opacity var(--speed) var(--ease);
+}
+.gallery-thumb:hover img {
+  transform: scale(1.03);
+}
+.gallery-thumb:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.lightbox {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+}
+.lightbox::backdrop {
+  background: rgb(14 13 11 / 0.92);
+}
+.lightbox[open] {
+  display: grid;
+  place-items: center;
+}
+.lightbox-figure {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.lightbox-figure img {
+  max-width: min(92vw, 1400px);
+  max-height: calc(100dvh - 120px);
+  border-radius: var(--radius);
+  object-fit: contain;
+  pointer-events: auto;
+}
+.lightbox-count {
+  font-size: 0.9rem;
+  color: rgb(255 255 255 / 0.75);
+}
+.lightbox-btn {
+  position: fixed;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.35);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color var(--speed) var(--ease);
+}
+.lightbox-btn:hover {
+  background: rgb(255 255 255 / 0.15);
+}
+.lightbox-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+.lightbox-close {
+  top: 16px;
+  inset-inline-end: 16px;
+}
+.lightbox-prev,
+.lightbox-next {
+  top: 50%;
+  translate: 0 -50%;
+}
+.lightbox-prev {
+  inset-inline-start: 16px;
+}
+.lightbox-next {
+  inset-inline-end: 16px;
+}
+@media (max-width: 599px) {
+  .lightbox-prev,
+  .lightbox-next {
+    top: auto;
+    bottom: 20px;
+    translate: none;
+  }
+}
+
+.flip-x {
+  display: inline-flex;
+  transform: scaleX(-1);
+}
+
+.location {
+  display: grid;
+  gap: 32px;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .location {
+    grid-template-columns: 1fr 1.6fr;
+    gap: 80px;
+  }
+}
+.location-text h2 {
+  margin-top: 0;
+}
+.map-frame {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+}
+.map-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+/* The map has no dark style of its own, so it is inverted to sit calmly in dark mode. */
+:root[data-theme='dark'] .map-frame iframe {
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.6) brightness(0.95);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .map-frame iframe {
+    filter: invert(0.9) hue-rotate(180deg) saturate(0.6) brightness(0.95);
+  }
+}
+.map-frame-label {
+  position: absolute;
+  bottom: 12px;
+  inset-inline-start: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--white);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.map-frame-label:hover {
+  background: var(--paper);
+}
+
+/* Admin: the clinic's gallery */
+
+.gallery-editor {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.gallery-editor li {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.gallery-editor img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--paper);
+}
+.gallery-editor-tools {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--paper);
+}
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.icon-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.btn.is-disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
