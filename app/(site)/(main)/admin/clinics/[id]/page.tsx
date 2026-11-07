@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { asc, eq } from 'drizzle-orm'
-import { createDoctor, deleteClinic, deleteDoctor, updateClinic, updateDoctor } from '@/app/admin-actions'
+import { createDoctor, deleteClinic, deleteDoctor, moveClinicPhoto, removeClinicPhoto, updateClinic, updateDoctor } from '@/app/admin-actions'
+import { ClinicInfoEditor, GalleryUploader } from '@/components/ClinicPageEditor'
 import { AccountEditor } from '@/components/AccountEditor'
 import { AdminTabs, FormNotice, LocalizedField, PhotoField } from '@/components/AdminParts'
 import { Avatar } from '@/components/Avatar'
@@ -16,7 +17,7 @@ import { users } from '@/db/schema'
 import { accentStyle } from '@/lib/accents'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { cities, specialties, specialtyIds, type CityId } from '@/lib/data'
+import { MAX_GALLERY, cities, specialties, specialtyIds, type CityId } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccent, getDoctorWhatsapps, getScreenLocale, getVisitMinutes } from '@/lib/settings'
 import { staffOptions } from '../../staff-options'
@@ -101,6 +102,12 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
             <LocalizedField name="name" label={t.edit.name} value={clinic.raw.name} t={t} required max={120} prefix="clinic" />
             <LocalizedField name="address" label={t.edit.address} value={clinic.raw.address} t={t} max={300} prefix="clinic" />
             <LocalizedField name="about" label={t.edit.about} value={clinic.raw.about} t={t} multiline max={1500} prefix="clinic" />
+            <div className="stack" style={stack(8)}>
+              <LocalizedField name="hours" label={t.edit.hours} value={clinic.raw.hours} t={t} multiline max={200} prefix="clinic" />
+              <p className="caption" style={{ margin: 0 }}>
+                {t.edit.hoursHint}
+              </p>
+            </div>
             <div className="form-grid">
               <div className="field">
                 <label htmlFor="clinic-city">{t.edit.city}</label>
@@ -139,6 +146,18 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
                 ))}
               </div>
             </fieldset>
+            <ClinicInfoEditor
+              info={clinic.raw.info}
+              labels={{
+                title: t.edit.info,
+                hint: t.edit.infoHint,
+                rowTitle: t.edit.infoTitle,
+                rowBody: t.edit.infoBody,
+                add: t.edit.addInfo,
+                remove: t.edit.removeInfo,
+                langs: t.edit.langs,
+              }}
+            />
             <PhotoField imageId={clinic.imageId} prefix="clinic" t={t} />
             <div>
               <button type="submit" className="btn">
@@ -146,6 +165,59 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
               </button>
             </div>
           </form>
+
+          <div id="gallery" className="card stack" style={stack(16)}>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{t.edit.gallery}</h2>
+            <p className="caption" style={{ margin: 0 }}>
+              {t.edit.galleryHint}
+            </p>
+            {clinic.gallery.length > 0 && (
+              <ul className="gallery-editor">
+                {clinic.gallery.map((imageId, i) => (
+                  <li key={imageId}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- uploaded photos are served from /img */}
+                    <img src={`/img/${imageId}`} alt={t.clinic.photoOf(i + 1, clinic.gallery.length)} />
+                    <div className="gallery-editor-tools">
+                      <form action={moveClinicPhoto}>
+                        <input type="hidden" name="clinicId" value={clinic.id} />
+                        <input type="hidden" name="imageId" value={imageId} />
+                        <input type="hidden" name="dir" value="earlier" />
+                        <button type="submit" className="icon-btn" aria-label={t.edit.moveEarlier} title={t.edit.moveEarlier} disabled={i === 0}>
+                          <span className="flip-x"><Icon name="arrow" size={16} /></span>
+                        </button>
+                      </form>
+                      <form action={moveClinicPhoto}>
+                        <input type="hidden" name="clinicId" value={clinic.id} />
+                        <input type="hidden" name="imageId" value={imageId} />
+                        <input type="hidden" name="dir" value="later" />
+                        <button type="submit" className="icon-btn" aria-label={t.edit.moveLater} title={t.edit.moveLater} disabled={i === clinic.gallery.length - 1}>
+                          <Icon name="arrow" size={16} />
+                        </button>
+                      </form>
+                      <form action={removeClinicPhoto} style={{ marginInlineStart: 'auto' }}>
+                        <input type="hidden" name="clinicId" value={clinic.id} />
+                        <input type="hidden" name="imageId" value={imageId} />
+                        <button type="submit" className="icon-btn" aria-label={t.edit.deletePhoto} title={t.edit.deletePhoto}>
+                          <Icon name="trash" size={16} />
+                        </button>
+                      </form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <GalleryUploader
+              clinicId={clinic.id}
+              room={MAX_GALLERY - clinic.gallery.length}
+              labels={{
+                add: t.edit.addPhotos,
+                uploading: t.edit.uploading,
+                full: t.edit.galleryFull,
+                error: t.edit.galleryError,
+              }}
+              localDigits={locale !== 'en'}
+            />
+          </div>
 
           <div className="card stack" style={{ '--stack': '32px' } as React.CSSProperties}>
             <AccentPicker clinic={clinic} accent={accent} t={t} />

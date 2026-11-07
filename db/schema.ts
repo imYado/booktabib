@@ -94,6 +94,12 @@ export const clinics = pgTable('clinics', {
   specialties: jsonb('specialties').$type<string[]>().notNull().default([]),
   about: jsonb('about').$type<Localized>().notNull(),
   imageId: text('image_id'),
+  // Opening hours as the clinic writes them; empty falls back to the site's default hours.
+  hours: jsonb('hours').$type<Partial<Localized>>().notNull().default({}),
+  // More photos of the clinic, in the order shown on its page (image ids).
+  gallery: jsonb('gallery').$type<string[]>().notNull().default([]),
+  // Extra facts the clinic wants patients to know, such as parking or insurance.
+  info: jsonb('info').$type<ClinicInfo[]>().notNull().default([]),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -239,6 +245,7 @@ export const prescriptions = pgTable(
 export type Prescription = typeof prescriptions.$inferSelect
 
 export type DoctorService = { name: Localized; fee: number }
+export type ClinicInfo = { title: Localized; body: Localized }
 export type BookedService = DoctorService
 
 export type User = typeof users.$inferSelect

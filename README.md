@@ -54,7 +54,7 @@ Vazirmatn) are self-hosted through `next/font`. The design tokens and components
 |---|---|---|
 | `/` | Everyone | Home: search, featured clinics, specialties |
 | `/clinics` | Everyone | Clinic search with city and specialty filters |
-| `/clinics/[id]` | Everyone | Clinic profile and its doctors |
+| `/clinics/[id]` | Everyone | Clinic profile: its doctors (one doctor is shown up front with a Book button), photo gallery, "Good to know" facts, opening hours and a map with directions |
 | `/doctors/[id]` | Everyone | Doctor profile and appointment request form |
 | `/bookings/[id]` | The patient's account, clinic staff | Full booking details |
 | `/q/[token]` | Anyone with the link | Patient's live line: name, number, people ahead, estimate, directions, WhatsApp. Nothing else |

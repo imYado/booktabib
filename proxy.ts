@@ -17,7 +17,8 @@ export function proxy(request: NextRequest) {
     `img-src 'self' blob: data:${preview}${preview ? ' https://vercel.com' : ''}`,
     `font-src 'self'${preview}${preview ? ' https://assets.vercel.com' : ''}`,
     `connect-src 'self'${preview}${preview ? ' wss://ws-us3.pusher.com' : ''}`,
-    `frame-src${preview || " 'none'"}`,
+    // Only the OpenStreetMap map on clinic pages may be shown in a frame.
+    `frame-src https://www.openstreetmap.org${preview}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

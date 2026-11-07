@@ -4,10 +4,10 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
-import { type DoctorService, bookings, notifications, prescriptions, clinics, clinicSettings, doctors, doctorSettings, images, sessions, users } from '@/db/schema'
-import { getCurrentUser } from '@/lib/auth'
+import { type ClinicInfo, type DoctorService, bookings, notifications, prescriptions, clinics, clinicSettings, doctors, doctorSettings, images, sessions, users } from '@/db/schema'
+import { canManageClinic, getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { isCity, isHonorific, isSpecialty } from '@/lib/data'
+import { MAX_GALLERY, isCity, isHonorific, isSpecialty } from '@/lib/data'
 import { locales, type Localized } from '@/lib/i18n'
 import { randomId } from '@/lib/ids'
 import { hashPassword } from '@/lib/password'
@@ -138,11 +138,89 @@ export async function updateClinic(formData: FormData) {
       phone: text(formData, 'phone', 30),
       lat: num(formData, 'lat', -90, 90),
       lng: num(formData, 'lng', -180, 180),
+      hours: localized(formData, 'hours', 200),
+      info: clinicInfo(formData),
       specialties: formData.getAll('specialties').map(String).filter(isSpecialty),
       ...(imageId !== undefined ? { imageId } : {}),
     })
     .where(eq(clinics.id, clinic.id))
   done(back)
+}
+
+/** The "More information" rows, sent as parallel lists (info_title_en, …, info_body_ckb) in the order shown. Empty rows are dropped. */
+function clinicInfo(formData: FormData): ClinicInfo[] {
+  const column = (key: string, max: number) => formData.getAll(key).map((v) => String(v).trim().slice(0, max))
+  const titles = Object.fromEntries(locales.map((l) => [l, column(`info_title_${l}`, 80)])) as Record<string, string[]>
+  const bodies = Object.fromEntries(locales.map((l) => [l, column(`info_body_${l}`, 600)])) as Record<string, string[]>
+  const rows: ClinicInfo[] = []
+  for (let i = 0; i < Math.min(titles.en.length, MAX_INFO); i++) {
+    const title = { en: titles.en[i] ?? '', ar: titles.ar[i] ?? '', ckb: titles.ckb[i] ?? '' }
+    const body = { en: bodies.en[i] ?? '', ar: bodies.ar[i] ?? '', ckb: bodies.ckb[i] ?? '' }
+    if (written(title) || written(body)) rows.push({ title, body })
+  }
+  return rows
+}
+
+const MAX_INFO = 12
+
+/** The clinic, when the signed-in user may change its page: admins, and the clinic's own assistants. */
+async function managedClinic(formData: FormData) {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const db = await getDb()
+  const id = text(formData, 'clinicId')
+  const [row] = await db.select({ id: clinics.id, gallery: clinics.gallery }).from(clinics).where(eq(clinics.id, id)).limit(1)
+  if (!row || !canManageClinic(user, row.id)) return null
+  return { db, id: row.id, gallery: row.gallery ?? [] }
+}
+
+export type GalleryResult = { ok: true } | { ok: false; error: 'photo' | 'full' | 'denied' }
+
+/** Adds one photo to the end of a clinic's gallery. The page uploads several photos one after another. */
+export async function addClinicPhoto(formData: FormData): Promise<GalleryResult> {
+  const clinic = await managedClinic(formData)
+  if (!clinic) return { ok: false, error: 'denied' }
+  if (clinic.gallery.length >= MAX_GALLERY) return { ok: false, error: 'full' }
+  const file = formData.get('photo')
+  if (!(file instanceof File) || file.size === 0 || file.size > MAX_PHOTO_BYTES) return { ok: false, error: 'photo' }
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  const contentType = sniffImage(bytes)
+  if (!contentType) return { ok: false, error: 'photo' }
+  const id = randomId(16)
+  await clinic.db.insert(images).values({ id, contentType, data: Buffer.from(bytes).toString('base64') })
+  await clinic.db
+    .update(clinics)
+    .set({ gallery: [...clinic.gallery, id] })
+    .where(eq(clinics.id, clinic.id))
+  revalidatePath('/', 'layout')
+  return { ok: true }
+}
+
+/** Removes a photo from a clinic's gallery and deletes it. */
+export async function removeClinicPhoto(formData: FormData) {
+  const clinic = await managedClinic(formData)
+  if (!clinic) return
+  const imageId = text(formData, 'imageId')
+  if (!clinic.gallery.includes(imageId)) return
+  await clinic.db
+    .update(clinics)
+    .set({ gallery: clinic.gallery.filter((x) => x !== imageId) })
+    .where(eq(clinics.id, clinic.id))
+  await clinic.db.delete(images).where(eq(images.id, imageId))
+  revalidatePath('/', 'layout')
+}
+
+/** Moves a gallery photo one place earlier or later. */
+export async function moveClinicPhoto(formData: FormData) {
+  const clinic = await managedClinic(formData)
+  if (!clinic) return
+  const from = clinic.gallery.indexOf(text(formData, 'imageId'))
+  const to = from + (formData.get('dir') === 'later' ? 1 : -1)
+  if (from < 0 || to < 0 || to >= clinic.gallery.length) return
+  const gallery = [...clinic.gallery]
+  ;[gallery[from], gallery[to]] = [gallery[to], gallery[from]]
+  await clinic.db.update(clinics).set({ gallery }).where(eq(clinics.id, clinic.id))
+  revalidatePath('/', 'layout')
 }
 
 export async function deleteClinic(formData: FormData) {
@@ -154,7 +232,7 @@ export async function deleteClinic(formData: FormData) {
 
   const team = doctorsAt(clinic.id)
   const doctorIds = team.map((d) => d.id)
-  const imageIds = [clinic.imageId, ...team.map((d) => d.imageId)].filter((x): x is string => !!x)
+  const imageIds = [clinic.imageId, ...clinic.gallery, ...team.map((d) => d.imageId)].filter((x): x is string => !!x)
   const db = await getDb()
   // Staff keep their accounts, without a clinic; everything else about the clinic goes.
   await db.update(users).set({ clinicId: null, doctorId: null }).where(eq(users.clinicId, clinic.id))
