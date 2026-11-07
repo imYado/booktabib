@@ -2624,3 +2624,147 @@ dl.details dd {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
+
+/* Phones: nothing may be wider than the screen, so no page needs zooming out. */
+
+/* Grid and flex children default to their content's width; let them shrink instead. */
+.split > *,
+.photo-field > *,
+.form-grid > *,
+.lang-fields > * {
+  min-width: 0;
+}
+h1,
+h2,
+h3,
+h4,
+dd,
+.lead {
+  overflow-wrap: break-word;
+}
+dl.details {
+  grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+}
+dl.details dd {
+  overflow-wrap: anywhere;
+}
+.file-input {
+  width: 100%;
+}
+@media (max-width: 480px) {
+  /* The light/dark switch fills the card instead of keeping its desktop width. */
+  .theme-switch {
+    --lang-w: minmax(0, 1fr);
+    width: 100%;
+  }
+  dl.details {
+    gap: 4px 16px;
+  }
+  .photo-field {
+    align-items: flex-start;
+  }
+}
+
+/* Touch screens: small controls get a finger-sized target. */
+@media (pointer: coarse) {
+  .lang-switch button {
+    min-height: 36px;
+  }
+  .link-button {
+    padding-block: 8px;
+  }
+  .btn-sm {
+    min-height: 40px;
+  }
+}
+
+/* Phones: the links sit in one tidy row under the logo; if a staff account has many, the row scrolls sideways. */
+@media (max-width: 640px) {
+  .site-header .nav {
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-basis: calc(100% + var(--gutter) * 2);
+    margin-inline: calc(var(--gutter) * -1);
+    padding-inline: var(--gutter);
+  }
+  .site-header .nav::-webkit-scrollbar {
+    display: none;
+  }
+  .nav a:not(.btn) {
+    min-width: 0;
+    flex: none;
+    padding: 8px 10px;
+    border-radius: 999px;
+  }
+  .nav a:not(.btn):first-child {
+    margin-inline-start: -10px;
+  }
+  .site-header .nav .bell {
+    flex: none;
+    margin-inline-start: auto;
+  }
+  .site-header .nav .btn {
+    min-width: 0;
+    flex: none;
+  }
+  .site-header .nav > a:not(.btn):not(.bell) + .btn {
+    margin-inline-start: auto;
+  }
+  .site-header-minimal .nav {
+    flex-basis: auto;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
+  }
+}
+
+/* Time and service pills inside a form field keep their own padding (the field's label rule used to remove it). */
+.field label.choice {
+  padding: 0 16px;
+  font-weight: 400;
+}
+.field label.choice.service-choice {
+  padding: 10px 16px;
+}
+
+/* A list row with a photo, text and one button keeps the button beside the text; the text wraps instead. */
+.list > li.row.between {
+  flex-wrap: nowrap;
+}
+.list > li.row.between > .row:first-child {
+  flex: 1;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+.list > li.row.between > .row:first-child > :last-child {
+  min-width: 0;
+}
+.list > li.row.between > .btn {
+  flex: none;
+}
+
+@media (max-width: 480px) {
+  /* Label above value, so neither is squeezed into a narrow column. */
+  dl.details {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  dl.details dt {
+    font-size: 0.85rem;
+  }
+  dl.details dt:not(:first-child) {
+    margin-top: 12px;
+  }
+}
+
+/* Phones: the desk's buttons use the card's full width so they sit two or three to a row. */
+@media (max-width: 639px) {
+  .queue-item.sortable-item .actions {
+    grid-column: 1 / -1;
+  }
+  .actions.row {
+    gap: 8px;
+  }
+}
