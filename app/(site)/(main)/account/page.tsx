@@ -53,7 +53,7 @@ export default async function ProfilePage({ searchParams }: Props) {
               <div className="meta">
                 <span>{getClinic(b.clinicId)?.name[locale]}</span>
                 <span>
-                  {formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b)}</span>
+                  {formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b, true)}</span>
                 </span>
               </div>
             </div>
@@ -139,7 +139,7 @@ export default async function ProfilePage({ searchParams }: Props) {
                       <span className="meta">
                         <span>{getDoctor(b.doctorId)?.name[locale]}</span>
                         <span>
-                          {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b)}</span>
+                          {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b, true)}</span>
                         </span>
                         {b.ticket !== null && (
                           <span>

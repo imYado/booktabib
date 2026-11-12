@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { bookingTime } from '@/lib/booking-time'
+import { bookingTime, patientTime } from '@/lib/booking-time'
 import Link from 'next/link'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { Icon } from '@/components/Icon'
@@ -91,7 +91,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
           <>
             <p className="caption">{t.live.appointment}</p>
             <p className="live-sub">
-              {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span>{bookingTime(locale, t, booking)}</span>
+              {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span>{bookingTime(locale, t, booking, true)}</span>
             </p>
           </>
         )}
@@ -117,7 +117,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
               {t.live.ahead(position.ahead)}
             </p>
             <p style={{ margin: 0 }}>
-              {t.live.estimate}: <strong>{formatTime(locale, estimate)}</strong>
+              {t.live.estimate}: <strong>{formatTime(locale, patientTime(estimate))}</strong>
             </p>
             <p className="caption" style={{ margin: 0 }}>
               {t.live.estimateNote}
