@@ -87,7 +87,7 @@ export default async function BookingPage({ params }: Props) {
             )}
             <dt>{t.booking.when}</dt>
             <dd>
-              {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span>{bookingTime(locale, t, booking)}</span>
+              {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span>{bookingTime(locale, t, booking, !user || user.role === 'patient')}</span>
             </dd>
           </dl>
         </div>

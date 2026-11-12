@@ -6,6 +6,7 @@ import { getCatalog } from './catalog'
 import { dailySlots, isWorkingDay } from './data'
 import { CLINIC_TIME_ZONE, todayISO } from './format'
 import { randomId } from './ids'
+import { patientTime } from './booking-time'
 import { getVisitMinutes } from './settings'
 
 export type { Booking, BookingStatus }
@@ -449,7 +450,8 @@ export async function remindArrivals(doctorId: string) {
       clinicId: b.clinicId,
       kind: 'arrive',
       ticket: b.ticket,
-      time: estimates.get(b.id) ?? b.time,
+      // Patients are told to come a little before they're likely to be seen.
+      time: patientTime(estimates.get(b.id) ?? b.time),
     })
   }
 }
