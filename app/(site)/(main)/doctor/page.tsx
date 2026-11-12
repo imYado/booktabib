@@ -14,8 +14,7 @@ import { getI18n } from '@/lib/locale'
 import { getDoctorWhatsapps, getVisitMinutes } from '@/lib/settings'
 import { estimateLine, listBookings, nowMinutes } from '@/lib/store'
 import { QueueSwitch } from '@/components/QueueSwitch'
-import { headers } from 'next/headers'
-import { deskSendsRenewals, listRenewals } from '@/lib/prescriptions'
+import { listRenewals } from '@/lib/prescriptions'
 import { returnRates, visitLengths } from '@/lib/analytics'
 import { isWorkingDay } from '@/lib/data'
 import { RenewalsPanel } from '@/components/RenewalsPanel'
@@ -39,7 +38,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const pastDays: string[] = []
   for (let i = 0; pastDays.length < 7 && i < 14; i++) if (isWorkingDay(addDays(today, -i))) pastDays.unshift(addDays(today, -i))
 
-  const [mine, whatsapps, visitMinutes, renewals, recent, lengths, returns, deskSends] = await Promise.all([
+  const [mine, whatsapps, visitMinutes, renewals, recent, lengths, returns] = await Promise.all([
     listBookings({ doctorId: doctor.id, fromDate: today }),
     getDoctorWhatsapps([doctor.id]),
     getVisitMinutes([doctor.id]),
@@ -47,11 +46,8 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
     listBookings({ doctorId: doctor.id, fromDate: addDays(today, -90), status: ['pending', 'approved', 'in_progress', 'done'] }),
     visitLengths(doctor.id, pastDays),
     returnRates(doctor.id, today),
-    deskSendsRenewals(clinic.id, doctor.id),
   ])
   const back = user.role === 'admin' ? `/doctor?doctor=${doctor.id}` : '/doctor'
-  const h = await headers()
-  const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}`
   const todays = mine.filter((b) => b.date === today && b.status !== 'pending' && b.status !== 'cancelled')
   const waiting = todays.filter((b) => b.status === 'approved')
   const seen = todays.filter((b) => b.status === 'done')
@@ -147,8 +143,8 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                     {current.note && <p className="caption" style={{ margin: '8px 0 0' }}>{current.note}</p>}
                   </div>
                   <div className="row">
-                    <StatusButton id={current.id} status="done" label={t.assistant.done} primary />
-                    <StatusButton id={current.id} status="approved" label={t.assistant.backToWaiting} />
+                    <StatusButton id={current.id} status="done" label={t.assistant.done} tone="go" icon="check" />
+                    <StatusButton id={current.id} status="approved" label={t.assistant.backToWaiting} icon="undo" />
                   </div>
                   <form action={addRenewal} className="row quick-renewal">
                     <input type="hidden" name="bookingId" value={current.id} />
@@ -166,7 +162,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                   <p className="caption" style={{ margin: '0 0 16px' }}>
                     {t.doctorDash.none}
                   </p>
-                  {waiting[0] && <StatusButton id={waiting[0].id} status="in_progress" label={t.doctorDash.callNext} primary />}
+                  {waiting[0] && <StatusButton id={waiting[0].id} status="in_progress" label={t.doctorDash.callNext} tone="go" icon="call" />}
                 </>
               )}
             </section>
@@ -249,7 +245,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                             </div>
                           </div>
                           <div className="actions">
-                            <StatusButton id={b.id} status="in_progress" label={t.assistant.call} />
+                            <StatusButton id={b.id} status="in_progress" label={t.assistant.call} tone="go" icon="call" />
                           </div>
                         </li>
                       ))}
@@ -276,7 +272,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                             </div>
                           </div>
                           <div className="actions">
-                            <StatusButton id={b.id} status="approved" label={t.assistant.addBack} />
+                            <StatusButton id={b.id} status="approved" label={t.assistant.addBack} icon="undo" />
                           </div>
                         </li>
                       ))}
@@ -294,11 +290,8 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
           rows={renewals}
           doctors={[doctor]}
           recent={recent.filter((b) => b.date <= addDays(today, 30))}
-          clinicName={clinic.name[locale]}
-          origin={origin}
           back={back}
           flag={query.renew}
-          sends={!deskSends}
           locale={locale}
           t={t}
         />

@@ -17,7 +17,7 @@ function text(formData: FormData, key: string, max = 200) {
 /** Back to the desk or dashboard the form was on. */
 function backTo(formData: FormData, flag: string) {
   const back = text(formData, 'back', 300)
-  const path = /^\/(assistant|doctor)(\?[\w=&%-]*)?$/.test(back) ? back : '/'
+  const path = /^\/(assistant\/renewals|doctor)(\?[\w=&%-]*)?$/.test(back) ? back : '/'
   return `${path}${path.includes('?') ? '&' : '?'}renew=${flag}#renewals`
 }
 
@@ -59,21 +59,6 @@ async function ownRenewal(id: string) {
   const p = await getPrescription(String(id))
   if (!p || !(await staffFor(p.doctorId))) return null
   return p
-}
-
-/** Ticks or unticks "told the patient". Sending the WhatsApp message ticks it. */
-export async function setRenewalNotified(id: string, notified: boolean) {
-  const p = await ownRenewal(id)
-  if (!p) return
-  await updatePrescription(p.id, { notifiedAt: notified ? new Date() : null })
-  revalidatePath('/', 'layout')
-}
-
-export async function toggleRenewalNotified(formData: FormData) {
-  const p = await ownRenewal(text(formData, 'id'))
-  if (!p) return
-  await updatePrescription(p.id, { notifiedAt: p.notifiedAt ? null : new Date() })
-  revalidatePath('/', 'layout')
 }
 
 /** Renewed, or no longer needed: takes it off the list and stops the reminders. */

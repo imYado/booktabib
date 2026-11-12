@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Icon } from './Icon'
 
 /** Lets the assistant send a patient their live queue link on WhatsApp, or copy it. */
 export function SendLink({ url, whatsappHref, sendLabel, copyLabel, copiedLabel }: {
@@ -14,13 +15,16 @@ export function SendLink({ url, whatsappHref, sendLabel, copyLabel, copiedLabel 
   return (
     <>
       {whatsappHref && (
-        <a className="btn btn-sm btn-secondary" href={whatsappHref} target="_blank" rel="noopener noreferrer">
+        <a className="btn btn-sm btn-info" href={whatsappHref} target="_blank" rel="noopener noreferrer">
+          <Icon name="send" size={16} />
           {sendLabel}
         </a>
       )}
       <button
         type="button"
-        className="btn btn-sm btn-secondary"
+        className="btn btn-sm btn-info btn-icon"
+        title={copied ? copiedLabel : copyLabel}
+        aria-label={copied ? copiedLabel : copyLabel}
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(url)
@@ -31,7 +35,7 @@ export function SendLink({ url, whatsappHref, sendLabel, copyLabel, copiedLabel 
           }
         }}
       >
-        {copied ? copiedLabel : copyLabel}
+        <Icon name={copied ? 'check' : 'copy'} size={16} />
       </button>
     </>
   )

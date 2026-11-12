@@ -52,9 +52,8 @@ export function PatientRow({
 /** Opens the edit form below a patient. Works without JavaScript: it ticks a hidden checkbox. */
 export function EditToggle({ id, label }: { id: string; label: string }) {
   return (
-    <label htmlFor={`edit-${id}`} className="btn btn-secondary btn-sm">
-      <Icon name="edit" size={14} />
-      {label}
+    <label htmlFor={`edit-${id}`} className="btn btn-edit btn-sm btn-icon" title={label} aria-label={label}>
+      <Icon name="edit" size={16} />
     </label>
   )
 }
@@ -79,7 +78,8 @@ export function PatientEditor({ b, t }: { b: Booking; t: Dictionary }) {
             <input id={`time-${b.id}`} name="time" type="time" step={300} className="input" defaultValue={b.time} dir="ltr" />
           </div>
         )}
-        <button type="submit" className="btn btn-sm">
+        <button type="submit" className="btn btn-go btn-sm">
+          <Icon name="check" size={16} />
           {t.assistant.save}
         </button>
       </form>
@@ -91,7 +91,7 @@ export function PatientEditor({ b, t }: { b: Booking; t: Dictionary }) {
 export function AddPatientForm({ doctors, locale, t }: { doctors: Doctor[]; locale: Locale; t: Dictionary }) {
   return (
     <details className="add-patient">
-      <summary className="btn btn-secondary btn-sm">
+      <summary className="btn btn-sm">
         <Icon name="plus" size={14} />
         {t.assistant.addPatient}
       </summary>
@@ -121,7 +121,8 @@ export function AddPatientForm({ doctors, locale, t }: { doctors: Doctor[]; loca
             ))}
           </select>
         </div>
-        <button type="submit" className="btn">
+        <button type="submit" className="btn btn-go">
+          <Icon name="plus" size={16} />
           {t.assistant.add}
         </button>
       </form>

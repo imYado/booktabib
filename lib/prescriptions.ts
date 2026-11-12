@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { bookings, notifications, prescriptions, users, type Prescription } from '@/db/schema'
+import { bookings, notifications, prescriptions, type Prescription } from '@/db/schema'
 import { addDays, daysUntil, todayISO } from './format'
 import { randomId } from './ids'
 
@@ -39,17 +39,6 @@ export async function listRenewals(clinicId: string, doctorId?: string): Promise
     .orderBy(asc(prescriptions.renewOn), asc(prescriptions.patientName))
   const today = todayISO()
   return Promise.all(rows.map(async (p) => ({ ...p, booked: await bookedSince(p), daysLeft: daysUntil(today, p.renewOn) })))
-}
-
-/** Whether an assistant looks after this doctor's patients, so the desk sends the renewal reminders rather than the doctor. */
-export async function deskSendsRenewals(clinicId: string, doctorId: string) {
-  const db = await getDb()
-  const [row] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(and(eq(users.role, 'assistant'), eq(users.clinicId, clinicId), or(isNull(users.doctorId), eq(users.doctorId, doctorId))))
-    .limit(1)
-  return !!row
 }
 
 export async function getPrescription(id: string) {
