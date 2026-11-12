@@ -60,7 +60,10 @@ Vazirmatn) are self-hosted through `next/font`. The design tokens and components
 | `/q/[token]` | Anyone with the link | Patient's live line: name, number, people ahead, estimate, directions, WhatsApp. Nothing else |
 | `/login`, `/register` | Everyone | Patients sign up; staff accounts come from an administrator |
 | `/account` | Signed in | My bookings, with cancelling |
-| `/assistant` | Assistants, admins | Approve or cancel requests, call patients in, pick the clinic's accent colour and doctors' WhatsApp numbers |
+| `/assistant` | Assistants, admins | Assistant desk, today's queue: call patients in, reorder the line, add walk-ins |
+| `/assistant/requests` | Assistants, admins | Approve or cancel appointment requests |
+| `/assistant/renewals` | Assistants, admins | Prescription renewals (patients are reminded by site notifications only) |
+| `/assistant/settings` | Assistants, admins | The clinic's accent colour, TV screen language, doctors' WhatsApp numbers and visit lengths |
 | `/doctor` | Doctors, admins | Today's patients, current patient, weekly chart, own WhatsApp number |
 | `/screen` | Assistants, admins | Clinic TV showing who is being served, refreshes every 5 seconds |
 | `/admin` | Admins | Create staff accounts |
