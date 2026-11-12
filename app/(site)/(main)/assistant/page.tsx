@@ -50,20 +50,6 @@ export default async function AssistantTodayPage({ searchParams }: { searchParam
         </Link>
       )}
 
-      {serving.length > 0 && (
-        <div className="card card-paper" style={{ marginBottom: 24 }}>
-          <p className="eyebrow">{t.assistant.nowServing}</p>
-          <div className="row" style={{ gap: '8px 32px' }}>
-            {serving.map((b) => (
-              <span key={b.id} style={{ fontSize: '1.25rem', fontWeight: 500 }}>
-                <strong className="ticket">{localDigits(locale, b.ticket ?? '')}</strong> {b.patientName}
-                <span className="caption"> · {getDoctor(b.doctorId)?.name[locale]}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       <section className="card panel">
         <div className="panel-head">
           <h2>{t.assistant.today}</h2>
@@ -78,6 +64,11 @@ export default async function AssistantTodayPage({ searchParams }: { searchParam
               count: localDigits(locale, serving.length + waiting.length),
               content: (
                 <>
+                  {serving.length > 0 && (
+                    <p className="list-title" style={{ margin: '16px 0 0' }}>
+                      {t.assistant.nowServing}
+                    </p>
+                  )}
                   {serving.length > 0 && (
                     <ul className="list with-doctor">
                       {serving.map((b) => (
