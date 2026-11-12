@@ -30,7 +30,7 @@ export function PatientRow({
       <div>
         <div style={{ fontWeight: 500 }}>{b.patientName}</div>
         <div className="meta">
-          <span>{formatTime(locale, b.time)}</span>
+          <span>{b.flexible ? t.booking.noSetTime : formatTime(locale, b.time)}</span>
           {estimate && (
             <span className="estimate">
               {t.assistant.estimate} {formatTime(locale, estimate)}
@@ -75,7 +75,7 @@ export function PatientEditor({ b, t }: { b: Booking; t: Dictionary }) {
         {(b.status === 'pending' || b.status === 'approved') && (
           <div className="field">
             <label htmlFor={`time-${b.id}`}>{t.assistant.time}</label>
-            <input id={`time-${b.id}`} name="time" type="time" step={300} className="input" defaultValue={b.time} dir="ltr" />
+            <input id={`time-${b.id}`} name="time" type="time" step={300} className="input" defaultValue={b.flexible ? '' : b.time} dir="ltr" />
           </div>
         )}
         <button type="submit" className="btn btn-go btn-sm">

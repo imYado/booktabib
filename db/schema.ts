@@ -59,6 +59,9 @@ export const bookings = pgTable(
     prescriptionId: text('prescription_id').references(() => prescriptions.id, { onDelete: 'set null' }),
     // Added at the desk rather than booked into a slot, so it doesn't hold the slot.
     walkIn: boolean('walk_in').notNull().default(false),
+    // Booked with "no specific time": the patient takes a place in the line instead of a slot, and
+    // `time` holds their estimated time, which follows the line as it changes.
+    flexible: boolean('flexible').notNull().default(false),
     // The service the patient picked, copied from the doctor's list at booking time so later price changes don't alter it.
     service: jsonb('service').$type<BookedService>(),
     // Place in the day's line after an assistant reorders it, in minutes since midnight like the
@@ -71,10 +74,10 @@ export const bookings = pgTable(
       .default(sql`replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '')`),
   },
   (t) => [
-    // One active booking per doctor per slot; cancelled ones and walk-ins don't hold a slot.
+    // One active booking per doctor per slot; cancelled ones, walk-ins and no-specific-time bookings don't hold a slot.
     uniqueIndex('bookings_slot_unique')
       .on(t.doctorId, t.date, t.time)
-      .where(sql`${t.status} <> 'cancelled' and not ${t.walkIn}`),
+      .where(sql`${t.status} <> 'cancelled' and not ${t.walkIn} and not ${t.flexible}`),
     uniqueIndex('bookings_ticket_unique').on(t.clinicId, t.date, t.ticket),
     index('bookings_clinic_date_idx').on(t.clinicId, t.date),
     index('bookings_doctor_date_idx').on(t.doctorId, t.date),

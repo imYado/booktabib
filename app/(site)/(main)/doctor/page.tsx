@@ -235,7 +235,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                           <div>
                             <div style={{ fontWeight: 500 }}>{b.patientName}</div>
                             <div className="meta">
-                              <span>{formatTime(locale, b.time)}</span>
+                              <span>{b.flexible ? t.booking.noSetTime : formatTime(locale, b.time)}</span>
                               {estimates.get(b.id) && (
                                 <span className="estimate">
                                   {t.assistant.estimate} {formatTime(locale, estimates.get(b.id)!)}
@@ -266,7 +266,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                           <div>
                             <div style={{ fontWeight: 500 }}>{b.patientName}</div>
                             <div className="meta">
-                              <span>{formatTime(locale, b.time)}</span>
+                              <span>{b.flexible ? t.booking.noSetTime : formatTime(locale, b.time)}</span>
                               {b.service && <span>{b.service.name[locale]}</span>}
                               <StatusPill status={b.status} t={t} />
                             </div>

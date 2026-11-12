@@ -2929,3 +2929,12 @@ dl.details dd {
     grid-template-columns: 1fr 1fr auto auto;
   }
 }
+
+/* "No specific time" on the booking form: a dashed pill so it reads as a different kind of choice. */
+.any-time-choice {
+  gap: 8px;
+  border-style: dashed;
+}
+.any-time-choice:has(input:checked) {
+  border-style: solid;
+}

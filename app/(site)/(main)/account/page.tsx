@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { bookingTime } from '@/lib/booking-time'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { logout } from '@/app/actions'
@@ -11,7 +12,7 @@ import { ThemeSwitcher } from '@/components/ThemeSwitcher'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
 import { getFavoriteIds } from '@/lib/favorites'
-import { formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
+import { formatDay, localDigits, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
@@ -52,7 +53,7 @@ export default async function ProfilePage({ searchParams }: Props) {
               <div className="meta">
                 <span>{getClinic(b.clinicId)?.name[locale]}</span>
                 <span>
-                  {formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
+                  {formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b)}</span>
                 </span>
               </div>
             </div>
@@ -138,7 +139,7 @@ export default async function ProfilePage({ searchParams }: Props) {
                       <span className="meta">
                         <span>{getDoctor(b.doctorId)?.name[locale]}</span>
                         <span>
-                          {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
+                          {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b)}</span>
                         </span>
                         {b.ticket !== null && (
                           <span>
