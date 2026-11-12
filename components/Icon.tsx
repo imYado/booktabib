@@ -1,4 +1,4 @@
-type IconName = 'search' | 'pin' | 'arrow' | 'clock' | 'star' | 'calendar' | 'phone' | 'image' | 'check' | 'x' | 'user' | 'grip' | 'plus' | 'edit' | 'trash' | 'undo' | 'heart' | 'instagram' | 'bell'
+export type IconName = 'search' | 'pin' | 'arrow' | 'clock' | 'star' | 'calendar' | 'phone' | 'image' | 'check' | 'x' | 'user' | 'grip' | 'plus' | 'edit' | 'trash' | 'undo' | 'heart' | 'instagram' | 'bell' | 'copy' | 'send' | 'call' | 'gear' | 'inbox' | 'repeat' | 'queue' | 'tv'
 
 const paths: Record<IconName, React.ReactNode> = {
   grip: (
@@ -12,6 +12,36 @@ const paths: Record<IconName, React.ReactNode> = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  copy: (
+    <>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    </>
+  ),
+  send: <path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z" />,
+  call: <path d="M3 10v4h3l6 4V6L6 10H3ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" />,
+  gear: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
+    </>
+  ),
+  inbox: <path d="M4 13h4.5l1.5 3h4l1.5-3H20M4 13l2.5-8h11L20 13v6H4v-6Z" />,
+  repeat: <path d="M4.5 12a7.5 7.5 0 0 1 13.4-4.6M19.5 12a7.5 7.5 0 0 1-13.4 4.6M18.5 3.5v4h-4M5.5 20.5v-4h4" />,
+  queue: (
+    <>
+      <circle cx="6" cy="7" r="2" />
+      <path d="M11 7h9M11 12h9M11 17h9" />
+      <circle cx="6" cy="12" r="0.6" />
+      <circle cx="6" cy="17" r="0.6" />
+    </>
+  ),
+  tv: (
+    <>
+      <rect x="3" y="5" width="18" height="12" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </>
+  ),
   bell: <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15L6 16.5ZM10 20.5a2.2 2.2 0 0 0 4 0" />,
   heart: <path d="M12 20.6c-.35 0-.7-.12-.98-.35C7.9 17.7 3 13.9 3 9.2 3 6.3 5.2 4 8 4c1.6 0 3 .8 4 2.1C13 4.8 14.4 4 16 4c2.8 0 5 2.3 5 5.2 0 4.7-4.9 8.5-8.02 11.05-.28.23-.63.35-.98.35Z" />,
   instagram: (
@@ -69,7 +99,7 @@ const paths: Record<IconName, React.ReactNode> = {
 }
 
 /** Icons whose meaning depends on direction, and so mirror in RTL. */
-const directional: IconName[] = ['arrow']
+const directional: IconName[] = ['arrow', 'call', 'undo']
 
 export function Icon({ name, size = 18, label }: { name: IconName; size?: number; label?: string }) {
   return (

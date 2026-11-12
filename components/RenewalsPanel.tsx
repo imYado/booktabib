@@ -1,38 +1,30 @@
-import { addRenewal, closeRenewal, toggleRenewalNotified } from '@/app/prescription-actions'
+import { addRenewal, closeRenewal } from '@/app/prescription-actions'
 import type { Booking } from '@/db/schema'
 import type { Doctor } from '@/lib/data'
-import { whatsappNumber } from '@/lib/data'
 import { addDays, formatDay, todayISO } from '@/lib/format'
 import type { Dictionary, Locale } from '@/lib/i18n'
 import type { RenewalRow } from '@/lib/prescriptions'
 import { Icon } from './Icon'
-import { RenewalWhatsapp } from './RenewalWhatsapp'
 
 /**
  * Prescription renewals on the desk and the doctor's dashboard: who needs a new prescription in the
- * next 7 days, whether they were told, and a form to add one. Where the clinic has an assistant, the
- * doctor only adds dates (`sends` off) and the desk tells the patients.
+ * next 7 days, whether the site has notified them, and a form to add one. Patients are only reminded
+ * through notifications on the site; nobody on the staff messages them.
  */
 export function RenewalsPanel({
   rows,
   doctors,
   recent,
-  clinicName,
-  origin,
   back,
   flag,
-  sends = true,
   locale,
   t,
 }: {
   rows: RenewalRow[]
   doctors: Doctor[]
   recent: Booking[]
-  clinicName: string
-  origin: string
   back: string
   flag?: string
-  sends?: boolean
   locale: Locale
   t: Dictionary
 }) {
@@ -43,54 +35,44 @@ export function RenewalsPanel({
   const doctorName = (id: string) => doctors.find((d) => d.id === id)?.name[locale] ?? ''
   const when = (p: RenewalRow) => (p.daysLeft === 0 ? r.today : p.daysLeft < 0 ? r.overdue(-p.daysLeft) : r.inDays(p.daysLeft))
 
-  const row = (p: RenewalRow) => {
-    const date = formatDay(locale, p.renewOn, { weekday: 'long', month: 'long' })
-    const phone = whatsappNumber(p.phone)
-    // The link carries the prescription, so booking through it counts as a return even from a new account.
-    const message = r.whatsappText(p.patientName, clinicName, date, `${origin}/doctors/${p.doctorId}?rx=${p.id}`)
-    return (
-      <li key={p.id} className="renewal">
-        <div className="renewal-main">
-          <div style={{ fontWeight: 500 }}>{p.patientName}</div>
-          <div className="meta">
-            <span className={p.daysLeft <= 0 ? 'renewal-due' : undefined}>
-              <Icon name="calendar" size={14} />
-              {formatDay(locale, p.renewOn)} · {when(p)}
-            </span>
-            {doctors.length > 1 && <span>{doctorName(p.doctorId)}</span>}
-            {p.phone && <span dir="ltr">{p.phone}</span>}
-          </div>
-          <div className="renewal-flags">
-            {(!p.userId || p.appSentAt || !p.booked) && (
-              <span className={p.appSentAt ? 'flag flag-on' : 'flag'}>{!p.userId ? r.noAccount : p.appSentAt ? r.appSent : r.appLater}</span>
-            )}
-            {!sends && p.notifiedAt && <span className="flag flag-on">{r.toldByDesk}</span>}
-            {p.booked && <span className="flag flag-on">{r.booked}</span>}
-          </div>
+  const row = (p: RenewalRow) => (
+    <li key={p.id} className="renewal">
+      <div className="renewal-main">
+        <div style={{ fontWeight: 500 }}>{p.patientName}</div>
+        <div className="meta">
+          <span className={p.daysLeft <= 0 ? 'renewal-due' : undefined}>
+            <Icon name="calendar" size={14} />
+            {formatDay(locale, p.renewOn)} · {when(p)}
+          </span>
+          {doctors.length > 1 && <span>{doctorName(p.doctorId)}</span>}
+          {p.phone && <span dir="ltr">{p.phone}</span>}
         </div>
-        {sends && (
-          <div className="row renewal-actions">
-            <form action={toggleRenewalNotified}>
-              <input type="hidden" name="id" value={p.id} />
-              <button type="submit" className={p.notifiedAt ? 'check is-on' : 'check'} aria-pressed={!!p.notifiedAt}>
-                <span className="check-box" aria-hidden="true">
-                  {p.notifiedAt && <Icon name="check" size={14} />}
-                </span>
-                {r.notified}
-              </button>
-            </form>
-            {phone.length >= 8 && <RenewalWhatsapp id={p.id} href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} label={r.whatsapp} />}
-            <form action={closeRenewal}>
-              <input type="hidden" name="id" value={p.id} />
-              <button type="submit" className="btn btn-secondary btn-sm">
-                {r.renewed}
-              </button>
-            </form>
-          </div>
-        )}
-      </li>
-    )
-  }
+        <div className="renewal-flags">
+          {(!p.userId || p.appSentAt || !p.booked) && (
+            <span className={p.appSentAt ? 'flag flag-on' : 'flag'}>
+              {p.userId && <Icon name="bell" size={12} />}
+              {!p.userId ? r.noAccount : p.appSentAt ? r.appSent : r.appLater}
+            </span>
+          )}
+          {p.booked && (
+            <span className="flag flag-on">
+              <Icon name="check" size={12} />
+              {r.booked}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="row renewal-actions">
+        <form action={closeRenewal}>
+          <input type="hidden" name="id" value={p.id} />
+          <button type="submit" className="btn btn-go btn-sm">
+            <Icon name="check" size={16} />
+            {r.renewed}
+          </button>
+        </form>
+      </div>
+    </li>
+  )
 
   // Each patient seen in the last 90 days or booked in the next 30, once, latest booking first.
   const seen = new Set<string>()
@@ -108,7 +90,7 @@ export function RenewalsPanel({
     <section id="renewals" className="renewals card panel">
       <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{r.title}</h2>
       <p className="caption" style={{ margin: '4px 0 16px' }}>
-        {sends ? r.lead : r.deskSends}
+        {r.lead}
       </p>
       {flag === 'added' && (
         <p className="saved-note" role="status">
@@ -178,7 +160,7 @@ export function RenewalsPanel({
           )}
         </div>
         <div>
-          <button type="submit" className="btn">
+          <button type="submit" className="btn btn-go">
             <Icon name="plus" size={16} />
             {r.addButton}
           </button>
