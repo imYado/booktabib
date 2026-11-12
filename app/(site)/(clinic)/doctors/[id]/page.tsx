@@ -11,7 +11,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccent } from '@/lib/settings'
-import { openSlots } from '@/lib/store'
+import { flexibleOpen, openSlots } from '@/lib/store'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -47,8 +47,10 @@ export default async function DoctorPage({ params, searchParams }: Props) {
   const accent = await getClinicAccent(clinic.id)
   const days = upcomingDays(7)
   const slotsByDay = await Promise.all(days.map((d) => openSlots(doctor.id, d)))
-  const selected = day && days.includes(day) ? day : (days.find((_, i) => slotsByDay[i].length) ?? days[0])
+  const selected = day && days.includes(day) ? day : (days.find((d, i) => slotsByDay[i].length || flexibleOpen(d)) ?? days[0])
   const slots = slotsByDay[days.indexOf(selected)]
+  // "No specific time": a place in the line with an estimated time, offered even when every slot is taken.
+  const anyTime = flexibleOpen(selected)
 
   return (
     <section className="section-tight" style={accentStyle(accent)}>
@@ -138,7 +140,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
             {doctor.services.length === 1 && <input type="hidden" name="service" value="0" />}
             <fieldset className="field">
               <legend style={{ marginBottom: 8 }}>{t.doctorProfile.time}</legend>
-              {slots.length ? (
+              {slots.length > 0 && (
                 <div className="choices">
                   {slots.map((s, i) => (
                     <label key={s} className="choice">
@@ -147,8 +149,21 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                     </label>
                   ))}
                 </div>
-              ) : (
-                <p className="caption">{t.doctorProfile.noSlots}</p>
+              )}
+              {!slots.length && <p className="caption">{t.doctorProfile.noSlots}</p>}
+              {anyTime && (
+                <>
+                  <div className="choices" style={{ marginTop: slots.length ? 8 : 0 }}>
+                    <label className="choice any-time-choice">
+                      <input type="radio" name="time" value="any" required defaultChecked={!slots.length} aria-describedby="any-time-hint" />
+                      <Icon name="clock" size={16} />
+                      {t.doctorProfile.anyTime}
+                    </label>
+                  </div>
+                  <p id="any-time-hint" className="caption" style={{ margin: '8px 0 0' }}>
+                    {t.doctorProfile.anyTimeHint}
+                  </p>
+                </>
               )}
             </fieldset>
             <div className="field">
@@ -187,7 +202,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                 {error === 'taken' ? t.doctorProfile.taken : error === 'busy' ? t.auth.locked : t.auth.missing}
               </p>
             )}
-            <button className="btn btn-block" type="submit" disabled={!slots.length}>
+            <button className="btn btn-block" type="submit" disabled={!slots.length && !anyTime}>
               <Icon name="calendar" />
               {t.doctorProfile.submit}
             </button>

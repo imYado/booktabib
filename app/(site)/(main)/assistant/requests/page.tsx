@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
+import { bookingTime } from '@/lib/booking-time'
 import { Icon } from '@/components/Icon'
 import { StatusButton } from '@/components/StatusButton'
 import { EditToggle, PatientEditor } from '@/components/DeskParts'
-import { formatDay, formatTime, localDigits } from '@/lib/format'
+import { formatDay, localDigits } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { listBookings } from '@/lib/store'
 import { DeskShell, LinkButtons, loadDesk, type DeskQuery } from '../desk'
@@ -34,7 +35,7 @@ export default async function AssistantRequestsPage({ searchParams }: { searchPa
                   <div className="meta">
                     <span>
                       <Icon name="calendar" size={14} />
-                      {formatDay(locale, b.date)} · <span>{formatTime(locale, b.time)}</span>
+                      {formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b)}</span>
                     </span>
                     <span>{getDoctor(b.doctorId)?.name[locale]}</span>
                     {b.service && <span>{b.service.name[locale]}</span>}

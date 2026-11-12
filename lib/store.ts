@@ -70,22 +70,43 @@ function nowHHMM() {
   )
 }
 
-/** Slots on a given day that are still free for a doctor. */
+/**
+ * Slots on a given day that are still free for a doctor. A slot that would land on a no-specific-time
+ * patient's estimated visit isn't offered either, so a new booking never pushes their time back.
+ */
 export async function openSlots(doctorId: string, date: string): Promise<string[]> {
   if (!isWorkingDay(date)) return []
   const db = await getDb()
-  const taken = await db
-    .select({ time: bookings.time })
-    .from(bookings)
-    .where(and(eq(bookings.doctorId, doctorId), eq(bookings.date, date), ne(bookings.status, 'cancelled')))
+  const [taken, line, visit] = await Promise.all([
+    db
+      .select({ time: bookings.time })
+      .from(bookings)
+      .where(and(eq(bookings.doctorId, doctorId), eq(bookings.date, date), ne(bookings.status, 'cancelled'), eq(bookings.flexible, false))),
+    dayLine(doctorId, date),
+    getVisitMinutes([doctorId]),
+  ])
   const takenSet = new Set(taken.map((b) => b.time))
+  const estimates = estimateLine(line, visit[doctorId], date === todayISO() ? nowMinutes() : 0)
+  const flexStarts = line.filter((b) => b.flexible && estimates.has(b.id)).map((b) => minutes(estimates.get(b.id)!))
+  const clashes = (t: string) => flexStarts.some((f) => Math.abs(f - minutes(t)) < visit[doctorId])
   const now = date === todayISO() ? nowHHMM() : ''
-  return dailySlots.filter((t) => !takenSet.has(t) && t > now)
+  return dailySlots.filter((t) => !takenSet.has(t) && !clashes(t) && t > now)
+}
+
+/** Whether a "no specific time" booking can still be made for this day. */
+export function flexibleOpen(date: string) {
+  return isWorkingDay(date) && (date !== todayISO() || nowHHMM() < dailySlots[dailySlots.length - 1])
+}
+
+/** Everyone expected in a doctor's line on a day, in line order: requests, waiting and with the doctor. */
+function dayLine(doctorId: string, date: string) {
+  return listBookings({ doctorId, date, status: ['pending', 'approved', 'in_progress'] })
 }
 
 export async function createBooking(input: {
   doctorId: string
   date: string
+  /** HH:MM, or '' for no specific time: the booking gets a place in the line and an estimated time. */
   time: string
   patientName: string
   phone: string
@@ -96,13 +117,24 @@ export async function createBooking(input: {
 }): Promise<Booking> {
   const doctor = (await getCatalog()).getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
-  if (!(await openSlots(doctor.id, input.date)).includes(input.time)) throw new SlotTakenError()
   const db = await getDb()
+  if (!input.time) {
+    if (!flexibleOpen(input.date)) throw new SlotTakenError()
+    const place = await flexiblePlace(doctor.id, input.date)
+    const [row] = await db
+      .insert(bookings)
+      .values({ ...input, ...place, flexible: true, id: randomId(10, 'BT'), clinicId: doctor.clinicId })
+      .returning()
+    await refreshFlexibleTimes(doctor.id, input.date)
+    return (await getBooking(row.id)) ?? row
+  }
+  if (!(await openSlots(doctor.id, input.date)).includes(input.time)) throw new SlotTakenError()
   try {
     const [row] = await db
       .insert(bookings)
       .values({ ...input, id: randomId(10, 'BT'), clinicId: doctor.clinicId })
       .returning()
+    await refreshFlexibleTimes(doctor.id, input.date)
     return row
   } catch (err) {
     // Someone else booked the same slot a moment earlier.
@@ -172,6 +204,7 @@ export async function setStatus(booking: Booking, status: BookingStatus, actorId
   // Putting someone back in the line after a mistake isn't news to them: they were already confirmed.
   const undo = status === 'approved' && (booking.status === 'in_progress' || booking.status === 'done')
   if (row && row.status !== booking.status && booking.userId !== actorId && !undo) await notify(row, status, row.ticket)
+  await refreshFlexibleTimes(booking.doctorId, booking.date)
   if (booking.date === todayISO()) await remindArrivals(booking.doctorId)
 }
 
@@ -215,12 +248,16 @@ export async function reorderQueue(ordered: Booking[]) {
       await db.update(bookings).set({ position: keys[i] }).where(eq(bookings.id, ordered[i].id))
     }
   }
-  for (const doctorId of new Set(ordered.map((b) => b.doctorId))) await remindArrivals(doctorId)
+  for (const b of new Map(ordered.map((b) => [b.doctorId, b])).values()) {
+    await refreshFlexibleTimes(b.doctorId, b.date)
+    await remindArrivals(b.doctorId)
+  }
 }
 
 /**
- * A patient added at the desk, approved straight away. Without a time they go to the end of today's
- * line; with one (say 09:30) they go into the line at that time, behind anyone already booked then.
+ * A patient added at the desk, approved straight away. Without a time they have no specific time: they
+ * go to the end of today's line and get an estimated time. With one (say 09:30) they go into the line
+ * at that time, behind anyone already booked then.
  */
 export async function addWalkIn(input: { doctorId: string; patientName: string; phone: string; note: string; time?: string }) {
   const doctor = (await getCatalog()).getDoctor(input.doctorId)
@@ -232,7 +269,7 @@ export async function addWalkIn(input: { doctorId: string; patientName: string; 
   const db = await getDb()
   const [row] = await db
     .insert(bookings)
-    .values({ ...input, id: randomId(10, 'BT'), clinicId: doctor.clinicId, date, time, walkIn: true, position, userId: null })
+    .values({ ...input, id: randomId(10, 'BT'), clinicId: doctor.clinicId, date, time, walkIn: true, flexible: !input.time, position, userId: null })
     .returning()
   await setStatus(row, 'approved')
   return row
@@ -246,14 +283,15 @@ export async function changeTime(booking: Booking, time: string, actorId?: strin
   if (booking.time === time || (booking.status !== 'pending' && booking.status !== 'approved')) return
   const db = await getDb()
   try {
-    await db.update(bookings).set({ time, position: null }).where(eq(bookings.id, booking.id))
+    await db.update(bookings).set({ time, position: null, flexible: false }).where(eq(bookings.id, booking.id))
   } catch (err) {
     if (!isUniqueViolation(err)) throw err
-    await db.update(bookings).set({ time, position: null, walkIn: true }).where(eq(bookings.id, booking.id))
+    await db.update(bookings).set({ time, position: null, flexible: false, walkIn: true }).where(eq(bookings.id, booking.id))
   }
   if (booking.userId && booking.userId !== actorId) {
     await db.insert(notifications).values({ id: randomId(16), userId: booking.userId, bookingId: booking.id, clinicId: booking.clinicId, kind: 'moved', ticket: booking.ticket, time })
   }
+  await refreshFlexibleTimes(booking.doctorId, booking.date)
   if (booking.date === todayISO()) await remindArrivals(booking.doctorId)
 }
 
@@ -300,32 +338,83 @@ export function nowMinutes() {
   return minutes(nowHHMM())
 }
 
+/** When the doctor starts seeing patients: the first bookable slot. */
+const DAY_START = minutes(dailySlots[0])
+
 /**
  * When each waiting patient in a doctor's line will likely be seen, in line order. The doctor takes
- * `visit` minutes per patient and nobody is seen before their place in the line (their booked time,
- * or the time of the place they were dragged into). `now` is minutes since midnight, 0 for another day.
+ * `visit` minutes per patient. A patient with a set time is never seen before their place in the line
+ * (their booked time, or the time of the place they were dragged into), so they anchor the line.
+ * A patient with no specific time fits around them: right after the patient ahead of them, or, when
+ * the patient behind them has a set time, one visit before that time, so they wait as little as
+ * possible and never hold anyone up. With a 20-minute visit, a no-time patient behind a 16:00 booking
+ * is expected at 16:20, and one in front of it at 15:40. `now` is minutes since midnight, 0 for
+ * another day; the estimates follow the line as people are late, called in or moved.
  */
 export function estimateLine(line: Booking[], visit: number, now: number): Map<string, string> {
   const serving = line.find((b) => b.status === 'in_progress')
-  let free = now
-  if (serving) free = Math.max(now, serving.calledAt ? clockMinutes(serving.calledAt) + visit : now + visit / 2)
-  const out = new Map<string, string>()
-  for (const b of line) {
-    if (b.status !== 'approved') continue
-    const start = Math.max(free, queueKey(b))
-    out.set(b.id, hhmm(Math.round(start / 5) * 5))
-    free = start + visit
+  const start = Math.max(now, DAY_START)
+  let free = start
+  if (serving) free = Math.max(start, serving.calledAt ? clockMinutes(serving.calledAt) + visit : now + visit / 2)
+  const waiting = line.filter((b) => b.status === 'approved' || b.status === 'pending')
+  // Earliest each patient can be seen, front to back.
+  const at = waiting.map((b) => {
+    const t = b.flexible ? free : Math.max(free, queueKey(b))
+    free = t + visit
+    return t
+  })
+  // Back to front: someone with no set time comes as late as the patient behind them allows.
+  for (let i = waiting.length - 2; i >= 0; i--) {
+    if (waiting[i].flexible) at[i] = Math.max(at[i], at[i + 1] - visit)
   }
+  const out = new Map<string, string>()
+  waiting.forEach((b, i) => out.set(b.id, hhmm(Math.round(at[i] / 5) * 5)))
   return out
 }
 
-/** Estimated times for everyone waiting in a doctor's line on a day (see estimateLine). */
+/** Estimated times for everyone in a doctor's line on a day (see estimateLine). */
 export async function lineEstimates(doctorId: string, date: string) {
-  const [line, visit] = await Promise.all([
-    listBookings({ doctorId, date, status: ['approved', 'in_progress'] }),
-    getVisitMinutes([doctorId]),
-  ])
-  return estimateLine(line, visit[doctorId], date === todayISO() ? minutes(nowHHMM()) : 0)
+  const [line, visit] = await Promise.all([dayLine(doctorId, date), getVisitMinutes([doctorId])])
+  return estimateLine(line, visit[doctorId], date === todayISO() ? nowMinutes() : 0)
+}
+
+/**
+ * Where a new no-specific-time booking goes in a doctor's line: the first place where their visit fits
+ * without moving anyone else's estimated time, or else the end of the line. Returns the place in the
+ * line and the time it gives them.
+ */
+async function flexiblePlace(doctorId: string, date: string) {
+  const [line, visit] = await Promise.all([dayLine(doctorId, date), getVisitMinutes([doctorId])])
+  const now = date === todayISO() ? nowMinutes() : 0
+  const before = estimateLine(line, visit[doctorId], now)
+  const keys = line.map(queueKey)
+  const candidates: number[] = []
+  // Before the first, in each gap, then at the end (just behind the last).
+  for (let i = 0; i <= line.length; i++) {
+    const lo = i === 0 ? Math.min(DAY_START, ...keys) - 1 : keys[i - 1]
+    const hi = i === line.length ? lo + 2 : keys[i]
+    candidates.push((lo + hi) / 2)
+  }
+  for (const position of candidates) {
+    const probe = { id: '__new', flexible: true, status: 'pending', position, time: '00:00' } as Booking
+    const trial = [...line, probe].sort((a, b) => queueKey(a) - queueKey(b))
+    const after = estimateLine(trial, visit[doctorId], now)
+    const moved = line.some((b) => before.has(b.id) && before.get(b.id) !== after.get(b.id))
+    if (!moved || position === candidates[candidates.length - 1]) return { position, time: after.get('__new')! }
+  }
+  throw new Error('unreachable')
+}
+
+/** Keeps each no-specific-time booking's time at its current estimate, after the line changed. */
+export async function refreshFlexibleTimes(doctorId: string, date: string) {
+  const line = await dayLine(doctorId, date)
+  if (!line.some((b) => b.flexible)) return
+  const estimates = await lineEstimates(doctorId, date)
+  const db = await getDb()
+  for (const b of line) {
+    const time = estimates.get(b.id)
+    if (b.flexible && time && time !== b.time) await db.update(bookings).set({ time }).where(eq(bookings.id, b.id))
+  }
 }
 
 /** How many waiting patients get the "time to come in" reminder: the next ones in line. */

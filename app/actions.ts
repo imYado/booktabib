@@ -38,7 +38,9 @@ export async function requestBooking(formData: FormData) {
   const { getDoctor } = await getCatalog()
   const doctorId = text(formData, 'doctorId')
   const date = text(formData, 'date')
-  const time = text(formData, 'time')
+  // "any" is the "no specific time" choice: the booking gets a place in the line and an estimated time.
+  const rawTime = text(formData, 'time')
+  const time = rawTime === 'any' ? '' : rawTime
   const patientName = text(formData, 'patientName', 80)
   const phone = text(formData, 'phone', 30)
   const note = text(formData, 'note', 300)
@@ -52,7 +54,7 @@ export async function requestBooking(formData: FormData) {
   const serviceIndex = Number(text(formData, 'service', 3))
   const service = doctor.services.length ? (doctor.services[serviceIndex] ?? null) : null
   if (doctor.services.length && (!service || !Number.isInteger(serviceIndex))) redirect(`${back}&error=missing`)
-  if (!patientName || !phone || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+  if (!patientName || !phone || !/^\d{4}-\d{2}-\d{2}$/.test(date) || (rawTime !== 'any' && !/^\d{2}:\d{2}$/.test(time))) {
     redirect(`${back}&error=missing`)
   }
   // Stops one person or script from filling a doctor's day with fake bookings.
