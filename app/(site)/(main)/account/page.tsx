@@ -10,7 +10,7 @@ import { Icon } from '@/components/Icon'
 import { StatusPill } from '@/components/StatusPill'
 import { ThemeSwitcher } from '@/components/ThemeSwitcher'
 import { requireUser } from '@/lib/auth'
-import { getCatalog } from '@/lib/catalog'
+import { getCatalog, getVisibleCatalog } from '@/lib/catalog'
 import { getFavoriteIds } from '@/lib/favorites'
 import { formatDay, localDigits, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
@@ -27,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 type Props = { searchParams: Promise<{ saved?: string; error?: string; claimed?: string }> }
 
 export default async function ProfilePage({ searchParams }: Props) {
-  const { clinics, doctors, getClinic, getDoctor } = await getCatalog()
+  const { doctors, getClinic, getDoctor } = await getCatalog()
   const { locale, t } = await getI18n()
   const user = await requireUser(['patient', 'assistant', 'doctor', 'admin'], '/account')
   const { saved, error, claimed } = await searchParams
@@ -36,7 +36,9 @@ export default async function ProfilePage({ searchParams }: Props) {
   // Ongoing: still waiting, confirmed or being seen, today or later. Everything else is history.
   const ongoing = all.filter((b) => b.date >= today && (b.status === 'pending' || b.status === 'approved' || b.status === 'in_progress'))
   const past = all.filter((b) => !ongoing.includes(b)).reverse()
-  const favoriteClinics = favoriteIds.map((id) => clinics.find((c) => c.id === id)).filter((c) => !!c)
+  // Hearted clinics that have since been hidden drop out of the list.
+  const visible = await getVisibleCatalog()
+  const favoriteClinics = favoriteIds.map((id) => visible.getClinic(id)).filter((c) => !!c)
   const themeCookie = (await cookies()).get(THEME_COOKIE)?.value
   const theme = isTheme(themeCookie) ? themeCookie : 'system'
   const p = t.profile

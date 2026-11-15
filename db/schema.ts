@@ -103,6 +103,8 @@ export const clinics = pgTable('clinics', {
   gallery: jsonb('gallery').$type<string[]>().notNull().default([]),
   // Extra facts the clinic wants patients to know, such as parking or insurance.
   info: jsonb('info').$type<ClinicInfo[]>().notNull().default([]),
+  // Hidden clinics are seen only by administrators: not listed, searched, opened or booked by anyone else.
+  hidden: boolean('hidden').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

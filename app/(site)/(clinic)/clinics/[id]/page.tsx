@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Avatar, ClinicPhoto } from '@/components/Avatar'
 import { ClinicGallery } from '@/components/ClinicGallery'
 import { Icon } from '@/components/Icon'
-import { getCatalog } from '@/lib/catalog'
+import { getVisibleCatalog } from '@/lib/catalog'
 import { cities, specialties } from '@/lib/data'
 import { formatNumber } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
@@ -19,14 +19,14 @@ import { canRateClinic, getMyRating } from '@/lib/ratings'
 type Props = { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { getClinic } = await getCatalog()
+  const { getClinic } = await getVisibleCatalog()
   const { locale } = await getI18n()
   const clinic = getClinic((await params).id)
   return { title: clinic?.name[locale] }
 }
 
 export default async function ClinicPage({ params }: Props) {
-  const { doctorsAt, getClinic } = await getCatalog()
+  const { doctorsAt, getClinic } = await getVisibleCatalog()
   const { locale, t } = await getI18n()
   const clinic = getClinic((await params).id)
   if (!clinic) notFound()
@@ -57,10 +57,18 @@ export default async function ClinicPage({ params }: Props) {
               />
             </div>
             {user?.role === 'admin' && (
-              <Link href={`/admin/clinics/${clinic.id}`} className="btn btn-secondary btn-sm" style={{ marginBottom: 16 }}>
-                <Icon name="edit" size={16} />
-                {t.edit.editPage}
-              </Link>
+              <div className="row" style={{ gap: 12, marginBottom: 16 }}>
+                <Link href={`/admin/clinics/${clinic.id}`} className="btn btn-secondary btn-sm">
+                  <Icon name="edit" size={16} />
+                  {t.edit.editPage}
+                </Link>
+                {clinic.hidden && (
+                  <span className="pill pill-hidden" title={t.edit.hiddenLead}>
+                    <Icon name="eye-off" size={14} />
+                    {t.edit.hiddenNote}
+                  </span>
+                )}
+              </div>
             )}
             <p className="lead">{clinic.about[locale]}</p>
             <div className="meta" style={{ fontSize: '1rem' }}>

@@ -110,7 +110,8 @@ export async function createClinic(formData: FormData) {
   if (getClinic(id)) id = `${id}-${randomId(4).toLowerCase()}`
   const db = await getDb()
   const empty = { en: '', ar: '', ckb: '' }
-  await db.insert(clinics).values({ id, name, city, address: empty, about: empty, phone: text(formData, 'phone', 30) })
+  // A new clinic starts hidden, so patients don't see it half filled in; the admin makes it public when it's ready.
+  await db.insert(clinics).values({ id, name, city, address: empty, about: empty, phone: text(formData, 'phone', 30), hidden: true })
   revalidatePath('/', 'layout')
   redirect(`/admin/clinics/${id}`)
 }
@@ -145,6 +146,20 @@ export async function updateClinic(formData: FormData) {
     })
     .where(eq(clinics.id, clinic.id))
   done(back)
+}
+
+/** Hides a clinic from everyone but administrators, or makes it public again. */
+export async function setClinicHidden(formData: FormData) {
+  await requireAdmin()
+  const { getClinic } = await getCatalog()
+  const clinic = getClinic(text(formData, 'id'))
+  if (!clinic) redirect('/admin/clinics')
+  const db = await getDb()
+  await db
+    .update(clinics)
+    .set({ hidden: formData.get('hidden') === '1' })
+    .where(eq(clinics.id, clinic.id))
+  done(`/admin/clinics/${clinic.id}`)
 }
 
 /** The "More information" rows, sent as parallel lists (info_title_en, …, info_body_ckb) in the order shown. Empty rows are dropped. */

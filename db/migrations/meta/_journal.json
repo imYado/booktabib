@@ -120,6 +120,13 @@
       "when": 1794481421293,
       "tag": "0016_flexible_time",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794742166407,
+      "tag": "0017_hidden_clinics",
+      "breakpoints": true
     }
   ]
 }

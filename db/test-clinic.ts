@@ -206,6 +206,8 @@ async function insertAll(db: DB) {
       ar: 'الطب الباطني ورعاية السكري وفحوص الأطفال، مع مختبر صغير داخل المركز.',
       ckb: 'نەخۆشییەکانی ناوەوە، چاودێری شەکرە و پشکنینی منداڵان، لەگەڵ تاقیگەیەکی بچووک لە ناو سەنتەرەکەدا.',
     },
+    // A test clinic: only administrators see it on the site.
+    hidden: true,
     createdAt: at(opened, '10:00'),
   })
   await db.insert(clinicSettings).values({ clinicId: TEST_CLINIC_ID, accent: 'sky' }).onConflictDoNothing()

@@ -1,6 +1,7 @@
 import 'server-only'
 import { asc, avg, count } from 'drizzle-orm'
 import { cache } from 'react'
+import { getCurrentUser } from './auth'
 import { getDb } from '@/db'
 import { clinicRatings, clinics as clinicsTable, doctors as doctorsTable } from '@/db/schema'
 import { fillLocalized, isCity, isHonorific, isSpecialty, localizedOrBlank, titledName, type Clinic, type Doctor } from './data'
@@ -41,6 +42,7 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
     hours: Object.values(c.hours ?? {}).some((v) => v?.trim()) ? fillLocalized(c.hours) : null,
     gallery: c.gallery ?? [],
     info: (c.info ?? []).map((i) => ({ title: fillLocalized(i.title), body: fillLocalized(i.body) })),
+    hidden: c.hidden,
     raw: {
       name: localizedOrBlank(c.name),
       address: localizedOrBlank(c.address),
@@ -75,6 +77,26 @@ export const getCatalog = cache(async (): Promise<Catalog> => {
       },
     }
   })
+  return {
+    clinics,
+    doctors,
+    getClinic: (id) => clinics.find((c) => c.id === id),
+    getDoctor: (id) => doctors.find((d) => d.id === id),
+    doctorsAt: (clinicId) => doctors.filter((d) => d.clinicId === clinicId),
+  }
+})
+
+/**
+ * The clinics and doctors the visitor may see on the public site: administrators see everything,
+ * everyone else only clinics that aren't hidden, and their doctors. Use it for anything a patient
+ * can find, open or book; staff tools and existing bookings use the full catalog.
+ */
+export const getVisibleCatalog = cache(async (): Promise<Catalog> => {
+  const [catalog, user] = await Promise.all([getCatalog(), getCurrentUser()])
+  if (user?.role === 'admin' || !catalog.clinics.some((c) => c.hidden)) return catalog
+  const clinics = catalog.clinics.filter((c) => !c.hidden)
+  const shown = new Set(clinics.map((c) => c.id))
+  const doctors = catalog.doctors.filter((d) => shown.has(d.clinicId))
   return {
     clinics,
     doctors,
