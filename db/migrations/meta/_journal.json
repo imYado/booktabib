@@ -127,6 +127,13 @@
       "when": 1794742166407,
       "tag": "0017_hidden_clinics",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794743808764,
+      "tag": "0018_remove_test_clinic",
+      "breakpoints": true
     }
   ]
 }
