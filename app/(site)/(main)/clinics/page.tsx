@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { ClinicCard } from '@/components/ClinicCard'
 import { Icon } from '@/components/Icon'
 import { SearchField } from '@/components/SearchField'
-import { getCatalog } from '@/lib/catalog'
+import { getVisibleCatalog } from '@/lib/catalog'
 import { cities, specialties, specialtyIds, type CityId, type SpecialtyId } from '@/lib/data'
 import { locales } from '@/lib/i18n'
 import { getI18n } from '@/lib/locale'
@@ -22,7 +22,7 @@ function matches(haystack: Record<string, string>, needle: string) {
 }
 
 export default async function ClinicsPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const { clinics, doctors, doctorsAt } = await getCatalog()
+  const { clinics, doctors, doctorsAt } = await getVisibleCatalog()
   const { locale, t } = await getI18n()
   const [accentsById, user, favoriteIds] = await Promise.all([getClinicAccents(), getCurrentUser(), getFavoriteIds()])
   const params = await searchParams

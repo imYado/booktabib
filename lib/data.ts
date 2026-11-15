@@ -115,6 +115,8 @@ export type Clinic = {
   gallery: string[]
   /** Extra facts, each a short title and text, such as parking or insurance. */
   info: { title: Localized; body: Localized }[]
+  /** Seen only by administrators: not listed, searched, opened or booked by anyone else. */
+  hidden: boolean
   /** Texts exactly as the admin typed them; the ones above fill empty languages from another. */
   raw: { name: Localized; address: Localized; about: Localized; hours: Localized; info: { title: Localized; body: Localized }[] }
 }

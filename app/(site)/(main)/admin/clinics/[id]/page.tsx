@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { asc, eq } from 'drizzle-orm'
-import { createDoctor, deleteClinic, deleteDoctor, moveClinicPhoto, removeClinicPhoto, updateClinic, updateDoctor } from '@/app/admin-actions'
+import { createDoctor, deleteClinic, deleteDoctor, moveClinicPhoto, removeClinicPhoto, setClinicHidden, updateClinic, updateDoctor } from '@/app/admin-actions'
 import { ClinicInfoEditor, GalleryUploader } from '@/components/ClinicPageEditor'
 import { AccountEditor } from '@/components/AccountEditor'
 import { AdminTabs, FormNotice, LocalizedField, PhotoField } from '@/components/AdminParts'
@@ -82,7 +82,15 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
           </Link>
         </p>
         <div className="row between" style={{ alignItems: 'end', marginBottom: 24 }}>
-          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', margin: 0 }}>{clinic.name[locale]}</h1>
+          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', margin: 0 }}>
+            {clinic.name[locale]}
+            {clinic.hidden && (
+              <span className="pill pill-hidden" style={{ marginInlineStart: 12, verticalAlign: 'middle' }}>
+                <Icon name="eye-off" size={14} />
+                {t.edit.hiddenBadge}
+              </span>
+            )}
+          </h1>
           <div className="row" style={{ gap: 8 }}>
             <Link href={`/admin/clinics/${clinic.id}/patients`} className="btn btn-secondary btn-sm">
               {t.edit.allPatients}
@@ -96,6 +104,21 @@ export default async function EditClinicPage({ params, searchParams }: Props) {
         <FormNotice params={query} t={t} />
 
         <div className="stack" style={{ ...stack(56), marginTop: 32 }}>
+          <form action={setClinicHidden} id="visibility" className={`card visibility-card${clinic.hidden ? ' is-hidden' : ''}`}>
+            <input type="hidden" name="id" value={clinic.id} />
+            <input type="hidden" name="hidden" value={clinic.hidden ? '0' : '1'} />
+            <div className="stack" style={stack(8)}>
+              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{t.edit.visibilityTitle}</h2>
+              <p className="caption" style={{ margin: 0 }}>
+                {clinic.hidden ? t.edit.hiddenLead : t.edit.publicLead}
+              </p>
+            </div>
+            <button type="submit" className={clinic.hidden ? 'btn' : 'btn btn-secondary'}>
+              <Icon name={clinic.hidden ? 'eye' : 'eye-off'} size={16} />
+              {clinic.hidden ? t.edit.makePublic : t.edit.hideClinic}
+            </button>
+          </form>
+
           <form action={updateClinic} className="card stack" style={stack(24)}>
             <input type="hidden" name="id" value={clinic.id} />
             <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{t.edit.details}</h2>

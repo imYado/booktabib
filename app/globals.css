@@ -649,6 +649,27 @@ fieldset {
   color: var(--caption);
   text-decoration: line-through;
 }
+/* A clinic only administrators can see. */
+.pill-hidden {
+  border-style: dashed;
+  color: var(--ink);
+  background: var(--white);
+}
+
+/* Admin clinic editor: who can see the clinic, and the one button that changes it. */
+.visibility-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.visibility-card > .stack {
+  flex: 1 1 320px;
+}
+.visibility-card.is-hidden {
+  border-style: dashed;
+}
 
 /* Lists split by thin rules */
 

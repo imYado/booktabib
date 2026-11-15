@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ClinicCard } from '@/components/ClinicCard'
 import { Icon } from '@/components/Icon'
 import { SearchField } from '@/components/SearchField'
-import { getCatalog } from '@/lib/catalog'
+import { getVisibleCatalog } from '@/lib/catalog'
 import { specialties, specialtyIds } from '@/lib/data'
 import { getI18n } from '@/lib/locale'
 import { getClinicAccents } from '@/lib/settings'
@@ -10,7 +10,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { getFavoriteIds } from '@/lib/favorites'
 
 export default async function HomePage() {
-  const { clinics, doctors } = await getCatalog()
+  const { clinics, doctors } = await getVisibleCatalog()
   const { locale, t } = await getI18n()
   const [accentsById, user, favoriteIds] = await Promise.all([getClinicAccents(), getCurrentUser(), getFavoriteIds()])
   return (

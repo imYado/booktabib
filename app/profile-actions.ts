@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 import { getDb } from '@/db'
 import { clinicRatings, favorites, sessions, users } from '@/db/schema'
 import { endOtherSessions, endSession, getCurrentUser } from '@/lib/auth'
-import { getCatalog } from '@/lib/catalog'
+import { getVisibleCatalog } from '@/lib/catalog'
 import { hashPassword, isWeakPassword, verifyPassword } from '@/lib/password'
 import { hit, isLimited, overLimit } from '@/lib/rate-limit'
 import { canRateClinic } from '@/lib/ratings'
@@ -40,7 +40,7 @@ async function me() {
 export async function toggleFavorite(clinicId: string): Promise<boolean> {
   const user = await getCurrentUser()
   if (!user || typeof clinicId !== 'string') return false
-  const { getClinic } = await getCatalog()
+  const { getClinic } = await getVisibleCatalog()
   if (!getClinic(clinicId)) return false
   const db = await getDb()
   const where = and(eq(favorites.userId, user.id), eq(favorites.clinicId, clinicId))
@@ -55,7 +55,7 @@ export async function toggleFavorite(clinicId: string): Promise<boolean> {
 export async function rateClinic(clinicId: string, stars: number): Promise<number> {
   const user = await getCurrentUser()
   if (!user || typeof clinicId !== 'string' || !Number.isInteger(stars) || stars < 1 || stars > 5) return 0
-  const { getClinic } = await getCatalog()
+  const { getClinic } = await getVisibleCatalog()
   if (!getClinic(clinicId) || !(await canRateClinic(user.id, clinicId))) return 0
   if (await overLimit(`rate:user:${user.id}`, 30, 10)) return 0
   const db = await getDb()

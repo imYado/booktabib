@@ -80,6 +80,12 @@ export default async function AdminClinicsPage({ searchParams }: { searchParams:
                     <div>
                       <div style={{ fontWeight: 500 }}>{c.name[locale]}</div>
                       <div className="meta">
+                        {c.hidden && (
+                          <span className="pill pill-hidden">
+                            <Icon name="eye-off" size={12} />
+                            {t.edit.hiddenBadge}
+                          </span>
+                        )}
                         <span>{cities[c.city][locale]}</span>
                         <span>
                           {t.clinic.doctors}: {formatNumber(locale, doctorsAt(c.id).length)}

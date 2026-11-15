@@ -9,7 +9,7 @@ import { getDb } from '@/db'
 import { users, type BookingStatus } from '@/db/schema'
 import { isAccent } from '@/lib/accents'
 import { canManageClinic, canManageDoctor, canUpdateBooking, endSession, getCurrentUser, startSession } from '@/lib/auth'
-import { getCatalog } from '@/lib/catalog'
+import { getCatalog, getVisibleCatalog } from '@/lib/catalog'
 import { isLocale, LOCALE_COOKIE } from '@/lib/i18n'
 import { todayISO } from '@/lib/format'
 import { randomId } from '@/lib/ids'
@@ -35,7 +35,8 @@ function safeNext(value: string, fallback: string) {
 }
 
 export async function requestBooking(formData: FormData) {
-  const { getDoctor } = await getCatalog()
+  // Doctors at hidden clinics can't be booked, except by an administrator.
+  const { getDoctor } = await getVisibleCatalog()
   const doctorId = text(formData, 'doctorId')
   const date = text(formData, 'date')
   // "any" is the "no specific time" choice: the booking gets a place in the line and an estimated time.

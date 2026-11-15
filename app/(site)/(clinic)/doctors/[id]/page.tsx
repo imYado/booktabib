@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { requestBooking } from '@/app/actions'
 import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
-import { getCatalog } from '@/lib/catalog'
+import { getVisibleCatalog } from '@/lib/catalog'
 import { cities, isWorkingDay, specialties } from '@/lib/data'
 import { addDays, formatDay, formatNumber, formatTime, todayISO } from '@/lib/format'
 import { getCurrentUser } from '@/lib/auth'
@@ -19,7 +19,7 @@ type Props = {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { getDoctor } = await getCatalog()
+  const { getDoctor } = await getVisibleCatalog()
   const { locale } = await getI18n()
   return { title: getDoctor((await params).id)?.name[locale] }
 }
@@ -34,7 +34,7 @@ function upcomingDays(count: number) {
 }
 
 export default async function DoctorPage({ params, searchParams }: Props) {
-  const { getClinic, getDoctor } = await getCatalog()
+  const { getClinic, getDoctor } = await getVisibleCatalog()
   const { locale, t } = await getI18n()
   const doctor = getDoctor((await params).id)
   if (!doctor) notFound()
