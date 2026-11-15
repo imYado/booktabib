@@ -134,6 +134,13 @@
       "when": 1794743808764,
       "tag": "0018_remove_test_clinic",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794743868764,
+      "tag": "0019_add_admin_yznobaidi",
+      "breakpoints": true
     }
   ]
 }
