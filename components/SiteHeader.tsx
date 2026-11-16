@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import BrandWord from './BrandWord'
 import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { getCurrentUser } from '@/lib/auth'
@@ -23,7 +24,7 @@ export async function SiteHeader({ minimal = false }: { minimal?: boolean }) {
     <header className={minimal ? 'site-header site-header-minimal' : 'site-header'}>
       <div className="container">
         <Link href={minimal && !user ? '/login' : '/'} className="brand" lang="en">
-          {t.brand}
+          <BrandWord text={t.brand} />
         </Link>
         <nav className="nav" aria-label="Main">
           {!minimal && (
