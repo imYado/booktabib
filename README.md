@@ -31,7 +31,9 @@ Locally no database setup is needed: without `DATABASE_URL` the app uses an embe
 3. In **Settings → Environment Variables**, add `ADMIN_EMAIL` with the email you will use as
    administrator, and `ADMIN_SETUP_CODE` with a long random secret (at least 12 characters) that
    only you know.
-4. Redeploy. Every deploy runs the database migrations first (`vercel-build` script).
+4. Redeploy. Every production deploy runs the database migrations first (`vercel-build` script).
+   Preview deploys of pull requests skip them, because previews use the same live database; set
+   `MIGRATE_PREVIEW=1` on a preview that has its own database to run them there.
 5. Open `/register?setup=1` on the site, sign up with your `ADMIN_EMAIL` and the setup code, and you
    land on the **Staff** page, where you create accounts for clinic assistants and doctors.
    Nobody can register `ADMIN_EMAIL` without the code, and a wrong code gives no account.
@@ -68,6 +70,8 @@ Vazirmatn) are self-hosted through `next/font`. The design tokens and components
 
 - **Bookings, accounts and sessions** are in Postgres (`db/schema.ts`), through Drizzle ORM.
   After changing the schema, run `npm run db:generate` and commit the new file in `db/migrations/`.
+  A migration runs once, on the live database. It should not overwrite clinic or doctor details
+  that administrators can edit on the site, or their edits are lost.
 - **Clinic accent colours and doctor WhatsApp numbers** are in `clinic_settings` and `doctor_settings`.
   The colours are listed in `lib/accents.ts`. An assistant can work for a whole clinic or for one
   doctor in it; a one-doctor assistant only sees that doctor's patients.
