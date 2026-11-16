@@ -265,6 +265,14 @@ svg {
   letter-spacing: -0.03em;
   text-decoration: none;
 }
+.brand-dot {
+  display: inline-block;
+  width: 0.25em;
+  height: 0.25em;
+  margin-inline-start: 0.08em;
+  border-radius: 50%;
+  background: #c84b47;
+}
 .nav {
   display: flex;
   align-items: center;

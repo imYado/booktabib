@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { bookingTime, patientTime } from '@/lib/booking-time'
 import Link from 'next/link'
+import BrandWord from '@/components/BrandWord'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
@@ -35,7 +36,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
   const header = (
     <header className="live-top">
       <Link href={brandHref} className="brand" lang="en">
-        booktabib
+        <BrandWord text="booktabib" />
       </Link>
       <LanguageSwitcher locale={locale} label={t.common.switchTo} />
     </header>
