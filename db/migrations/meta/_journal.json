@@ -155,13 +155,6 @@
       "when": 1794743988764,
       "tag": "0021_sample_clinic_photos",
       "breakpoints": true
-    },
-    {
-      "idx": 22,
-      "version": "7",
-      "when": 1795347286038,
-      "tag": "0022_phone_verification",
-      "breakpoints": true
     }
   ]
 }

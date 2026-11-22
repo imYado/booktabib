@@ -5,8 +5,8 @@ import { Icon } from './Icon'
 
 /* eslint-disable @next/next/no-img-element -- uploaded photos are served from /img */
 
-/** Staff | Clinics | Phone numbers tabs at the top of the admin pages. */
-export function AdminTabs({ active, t }: { active: 'staff' | 'clinics' | 'phones'; t: Dictionary }) {
+/** Staff | Clinics tabs at the top of the admin pages. */
+export function AdminTabs({ active, t }: { active: 'staff' | 'clinics'; t: Dictionary }) {
   return (
     <nav className="admin-tabs" aria-label={t.admin.title}>
       <Link href="/admin" aria-current={active === 'staff' ? 'page' : undefined}>
@@ -14,9 +14,6 @@ export function AdminTabs({ active, t }: { active: 'staff' | 'clinics' | 'phones
       </Link>
       <Link href="/admin/clinics" aria-current={active === 'clinics' ? 'page' : undefined}>
         {t.edit.clinicsTab}
-      </Link>
-      <Link href="/admin/phones" aria-current={active === 'phones' ? 'page' : undefined}>
-        {t.phoneVerify.tab}
       </Link>
     </nav>
   )

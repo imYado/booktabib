@@ -65,7 +65,6 @@ Vazirmatn) are self-hosted through `next/font`. The design tokens and components
 | `/doctor` | Doctors, admins | Today's patients, current patient, weekly chart, own WhatsApp number |
 | `/screen` | Assistants, admins | Clinic TV showing who is being served, refreshes every 5 seconds |
 | `/admin` | Admins | Create staff accounts |
-| `/admin/phones` | Admins | Accounts whose phone number isn't verified yet, with a button to mark each verified |
 
 ### Data
 
@@ -78,9 +77,4 @@ Vazirmatn) are self-hosted through `next/font`. The design tokens and components
   doctor in it; a one-doctor assistant only sees that doctor's patients.
 - **Clinics and doctors** are still the fictional sample list in `lib/data.ts`. Replace it with real
   clinics when you have them.
-- **Phone verification** is by hand until there is an OTP check (`lib/phone-verification.ts`). Every
-  account except administrators starts unverified and sees a strip under the header with a button that
-  opens WhatsApp to booktabib (`VERIFY_WHATSAPP`, default `07730304703`) with "verify my number" and
-  their number typed in, in Arabic. An administrator marks it verified on `/admin/phones`. Changing the
-  number makes it unverified again. Unverified accounts can still book.
 - Passwords are hashed with scrypt. Sessions are random tokens in an http-only cookie, stored hashed.

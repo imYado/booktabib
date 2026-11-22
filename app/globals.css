@@ -1289,7 +1289,6 @@ dl.details dd {
 /* Admin edit mode */
 
 .admin-tabs {
-  flex-wrap: wrap;
   display: inline-flex;
   gap: 4px;
   padding: 4px;
@@ -2967,47 +2966,4 @@ dl.details dd {
 }
 .any-time-choice:has(input:checked) {
   border-style: solid;
-}
-
-/* Under the header while a signed-in user's phone number isn't verified. Informs only. */
-.verify-banner {
-  background: var(--paper);
-  border-bottom: 1px solid var(--rule);
-}
-.verify-banner .container {
-  display: flex;
-  align-items: center;
-  gap: 8px 12px;
-  padding-block: 10px;
-  flex-wrap: wrap;
-}
-.verify-banner p {
-  margin: 0;
-  flex: 1 1 280px;
-  font-size: 0.95rem;
-}
-.verify-banner .btn {
-  white-space: nowrap;
-}
-.phone-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-inline-start: 8px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--caption);
-}
-.phone-row {
-  gap: 12px 16px;
-  flex-wrap: wrap;
-}
-.phone-number {
-  font-size: 1.15rem;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  text-align: start;
-}
-:root[dir='rtl'] .phone-number {
-  text-align: end;
 }

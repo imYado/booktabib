@@ -15,13 +15,6 @@ export const users = pgTable('users', {
   gender: text('gender').notNull().default(''),
   birthDate: date('birth_date'),
   role: roleEnum('role').notNull().default('patient'),
-  // The phone number as it was when it was last verified, in wa.me digits (lib/data.ts whatsappNumber).
-  // The phone counts as verified only while it still matches, so changing it makes it unverified again.
-  // Set by an administrator for now; an OTP check can set it the same way later (lib/phone-verification.ts).
-  phoneVerified: text('phone_verified').notNull().default(''),
-  phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
-  // 'admin' or 'otp': how the number was verified.
-  phoneVerifiedBy: text('phone_verified_by').notNull().default(''),
   // Set when an administrator hands out a temporary password; cleared when the user picks their own.
   mustChangePassword: boolean('must_change_password').notNull().default(false),
   // Staff are tied to the clinic or doctor they work for (ids from lib/data.ts).
