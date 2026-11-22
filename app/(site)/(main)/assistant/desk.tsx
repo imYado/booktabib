@@ -70,7 +70,8 @@ export async function DeskShell({ desk, children }: { desk: Desk; children: Reac
   const dueSoon = renewals.filter((p) => p.daysLeft <= 7 && !p.booked).length
   const tabs: { key: Section; icon: IconName; label: string; count?: number; alert?: boolean }[] = [
     { key: 'today', icon: 'queue', label: t.assistant.tabToday, count: waiting.length },
-    { key: 'requests', icon: 'inbox', label: t.assistant.tabRequests, count: pending.length, alert: pending.length > 0 },
+    // Requests accepted with the day still to set ("Pending date") are counted but don't need attention now.
+    { key: 'requests', icon: 'inbox', label: t.assistant.tabRequests, count: pending.length, alert: pending.some((b) => !b.datePending) },
     { key: 'renewals', icon: 'repeat', label: t.assistant.tabRenewals, count: dueSoon, alert: dueSoon > 0 },
     { key: 'settings', icon: 'gear', label: t.assistant.tabSettings },
   ]

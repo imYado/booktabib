@@ -17,7 +17,7 @@ import { hashPassword, isWeakPassword, verifyPasswordOrDummy } from '@/lib/passw
 import { getPrescription } from '@/lib/prescriptions'
 import { clearLimit, clientIp, hit, isLimited, overLimit } from '@/lib/rate-limit'
 import { getDeskSchedules, setClinicAccent, setDeskSchedules, setDoctorWhatsapp, setScreenLocale, setVisitMinutes } from '@/lib/settings'
-import { addWalkIn, changeTime, claimBooking, createBooking, getBooking, reorderQueue, scheduleBooking, setStatus, SlotTakenError, updateContact } from '@/lib/store'
+import { addWalkIn, changeTime, claimBooking, createBooking, getBooking, markDatePending, reorderQueue, scheduleBooking, setStatus, SlotTakenError, updateContact } from '@/lib/store'
 
 export async function setLocale(formData: FormData) {
   const locale = formData.get('locale')
@@ -269,6 +269,15 @@ export async function scheduleRequest(formData: FormData) {
   const ok = await scheduleBooking(booking, date, time, user.id)
   revalidatePath('/', 'layout')
   if (!ok) redirect(safeNext(`${back}${back.includes('?') ? '&' : '?'}taken=${booking.id}#b-${booking.id}`, '/assistant/requests'))
+}
+
+/** The assistant accepts a request but leaves its day for later ("Pending date"). */
+export async function markRequestDatePending(formData: FormData) {
+  const booking = await getBooking(text(formData, 'id'))
+  const user = booking && (await deskUserFor(booking.doctorId))
+  if (!booking || !user) return
+  await markDatePending(booking, user.id)
+  revalidatePath('/', 'layout')
 }
 
 export async function updateClinicAccent(formData: FormData) {

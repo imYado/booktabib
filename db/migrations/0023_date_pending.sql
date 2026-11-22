@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ADD COLUMN "date_pending" boolean DEFAULT false NOT NULL;

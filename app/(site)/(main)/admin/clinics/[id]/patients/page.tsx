@@ -73,7 +73,7 @@ export default async function ClinicPatientsPage({ params, searchParams }: Props
                       </div>
                     </div>
                     <div className="row" style={{ gap: 8 }}>
-                      <StatusPill status={b.status} t={t} />
+                      <StatusPill status={b.status} t={t} datePending={b.datePending} />
                       <span className="btn btn-secondary btn-sm">
                         <Icon name="edit" size={14} />
                         {t.edit.edit}

@@ -271,7 +271,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
                             <div className="meta">
                               <span>{b.flexible ? t.booking.noSetTime : formatTime(locale, b.time)}</span>
                               {b.service && <span>{b.service.name[locale]}</span>}
-                              <StatusPill status={b.status} t={t} />
+                              <StatusPill status={b.status} t={t} datePending={b.datePending} />
                             </div>
                           </div>
                           <div className="actions">

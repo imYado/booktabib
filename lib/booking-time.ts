@@ -29,10 +29,10 @@ export function bookingTime(locale: Locale, t: Dictionary, b: { time: string; fl
 export function bookingWhen(
   locale: Locale,
   t: Dictionary,
-  b: { date: string; time: string; flexible: boolean; unscheduled: boolean },
+  b: { date: string; time: string; flexible: boolean; unscheduled: boolean; datePending?: boolean },
   forPatient = false,
   dayOptions: Intl.DateTimeFormatOptions = {},
 ) {
-  if (b.unscheduled) return t.booking.toBeScheduled
+  if (b.unscheduled) return b.datePending ? t.booking.datePending : t.booking.toBeScheduled
   return `${formatDay(locale, b.date, dayOptions)} · ${bookingTime(locale, t, b, forPatient)}`
 }

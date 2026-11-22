@@ -2993,7 +2993,11 @@ dl.details dd {
 }
 @media (min-width: 640px) {
   .schedule-form {
-    grid-template-columns: minmax(0, 200px) minmax(0, 160px) auto;
+    grid-template-columns: minmax(0, 200px) minmax(0, 160px) auto auto;
     justify-content: start;
   }
+}
+/* The hint and the "taken" notice span the row without widening the button columns. */
+.schedule-form > p {
+  contain: inline-size;
 }

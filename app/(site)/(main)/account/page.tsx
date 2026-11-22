@@ -57,7 +57,7 @@ export default async function ProfilePage({ searchParams }: Props) {
                 <span>{bookingWhen(locale, t, b, true)}</span>
               </div>
             </div>
-            <StatusPill status={b.status} t={t} />
+            <StatusPill status={b.status} t={t} datePending={b.datePending} />
           </Link>
         </li>
       ))}
@@ -140,7 +140,7 @@ export default async function ProfilePage({ searchParams }: Props) {
                         <span>{getDoctor(b.doctorId)?.name[locale]}</span>
                         <span>
                           {b.unscheduled ? (
-                            t.booking.toBeScheduled
+                            b.datePending ? t.booking.datePending : t.booking.toBeScheduled
                           ) : (
                             <>
                               {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b, true)}</span>
@@ -155,7 +155,7 @@ export default async function ProfilePage({ searchParams }: Props) {
                       </span>
                     </Link>
                     <div className="row" style={{ gap: 8 }}>
-                      <StatusPill status={b.status} t={t} />
+                      <StatusPill status={b.status} t={t} datePending={b.datePending} />
                       <Link href={`/q/${b.liveToken}`} className="btn btn-sm">
                         {t.account.openLive}
                         <Icon name="arrow" size={14} />

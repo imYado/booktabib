@@ -40,7 +40,7 @@ export function PatientRow({
           {doctorName && <span>{doctorName}</span>}
           {b.service && <span>{b.service.name[locale]}</span>}
           {b.phone && <span dir="ltr">{b.phone}</span>}
-          <StatusPill status={b.status} t={t} />
+          <StatusPill status={b.status} t={t} datePending={b.datePending} />
         </div>
       </div>
       <div className="actions row">{children}</div>

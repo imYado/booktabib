@@ -66,6 +66,8 @@ export const bookings = pgTable(
     // until an assistant schedules it, and kept out of every line and slot until then. `date` is the day
     // it was requested and `time` a placeholder ('00:00').
     unscheduled: boolean('unscheduled').notNull().default(false),
+    // An unscheduled request the assistant accepted but hasn't given a day yet ("Pending date").
+    datePending: boolean('date_pending').notNull().default(false),
     // The service the patient picked, copied from the doctor's list at booking time so later price changes don't alter it.
     service: jsonb('service').$type<BookedService>(),
     // Place in the day's line after an assistant reorders it, in minutes since midnight like the
@@ -214,7 +216,7 @@ export const notifications = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     bookingId: text('booking_id').references(() => bookings.id, { onDelete: 'cascade' }),
     clinicId: text('clinic_id').notNull(),
-    // 'approved', 'arrive', 'turn', 'cancelled', 'done', 'moved', or 'renew7', 'renew3', 'renewDay' for prescriptions
+    // 'approved', 'datePending', 'arrive', 'turn', 'cancelled', 'done', 'moved', or 'renew7', 'renew3', 'renewDay' for prescriptions
     kind: text('kind').notNull(),
     ticket: integer('ticket'),
     // For 'arrive': the estimated time (HH:MM) the patient should be there. For 'moved': the new time.

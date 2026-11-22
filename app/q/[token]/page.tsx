@@ -84,7 +84,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
           </>
         )}
 
-        {booking.status === 'pending' && <p className="live-sub">{t.live.pending}</p>}
+        {booking.status === 'pending' && <p className="live-sub">{booking.datePending ? t.live.datePending : t.live.pending}</p>}
         {booking.status === 'cancelled' && <p className="live-sub">{t.live.cancelled}</p>}
         {booking.status === 'done' && <p className="live-sub">{t.live.done}</p>}
 

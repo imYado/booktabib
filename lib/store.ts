@@ -234,7 +234,7 @@ export async function scheduleBooking(booking: Booking, date: string, time: stri
   try {
     await db
       .update(bookings)
-      .set({ date, ...place, unscheduled: false })
+      .set({ date, ...place, unscheduled: false, datePending: false })
       .where(and(eq(bookings.id, booking.id), eq(bookings.unscheduled, true)))
   } catch (err) {
     if (isUniqueViolation(err)) return false
@@ -243,6 +243,19 @@ export async function scheduleBooking(booking: Booking, date: string, time: stri
   const scheduled = await getBooking(booking.id)
   if (scheduled) await setStatus(scheduled, 'approved', actorId)
   return true
+}
+
+/**
+ * Accepts a request the assistant schedules without giving it a day yet: it stays on the Requests
+ * page under "Pending date", and the patient is told the clinic will set the day.
+ */
+export async function markDatePending(booking: Booking, actorId?: string) {
+  if (!booking.unscheduled || booking.status !== 'pending' || booking.datePending) return
+  const db = await getDb()
+  await db.update(bookings).set({ datePending: true }).where(eq(bookings.id, booking.id))
+  if (booking.userId && booking.userId !== actorId) {
+    await db.insert(notifications).values({ id: randomId(16), userId: booking.userId, bookingId: booking.id, clinicId: booking.clinicId, kind: 'datePending' })
+  }
 }
 
 /** The patients currently with a doctor at a clinic today, most recently called first. */

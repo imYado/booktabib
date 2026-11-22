@@ -57,7 +57,7 @@ export default async function BookingPage({ params }: Props) {
           <dl className="details">
             <dt>{t.booking.status}</dt>
             <dd>
-              <StatusPill status={booking.status} t={t} />
+              <StatusPill status={booking.status} t={t} datePending={booking.datePending} />
             </dd>
             <dt>{t.booking.reference}</dt>
             <dd dir="ltr" style={{ textAlign: 'start' }}>
