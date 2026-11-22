@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { bookingTime } from '@/lib/booking-time'
+import { bookingWhen } from '@/lib/booking-time'
 import Link from 'next/link'
 import { StatusButton } from '@/components/StatusButton'
 import { StatusPill } from '@/components/StatusPill'
 import { canUpdateBooking, getCurrentUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { formatDay, formatNumber, localDigits } from '@/lib/format'
+import { formatNumber, localDigits } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { getBooking } from '@/lib/store'
 
@@ -57,7 +57,7 @@ export default async function BookingPage({ params }: Props) {
           <dl className="details">
             <dt>{t.booking.status}</dt>
             <dd>
-              <StatusPill status={booking.status} t={t} />
+              <StatusPill status={booking.status} t={t} datePending={booking.datePending} />
             </dd>
             <dt>{t.booking.reference}</dt>
             <dd dir="ltr" style={{ textAlign: 'start' }}>
@@ -87,7 +87,7 @@ export default async function BookingPage({ params }: Props) {
             )}
             <dt>{t.booking.when}</dt>
             <dd>
-              {formatDay(locale, booking.date, { weekday: 'long', month: 'long' })} · <span>{bookingTime(locale, t, booking, !user || user.role === 'patient')}</span>
+              {bookingWhen(locale, t, booking, !user || user.role === 'patient', { weekday: 'long', month: 'long' })}
             </dd>
           </dl>
         </div>

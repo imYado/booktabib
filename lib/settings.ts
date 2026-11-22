@@ -28,6 +28,21 @@ export async function setScreenLocale(clinicId: string, screenLocale: Locale) {
     .onConflictDoUpdate({ target: clinicSettings.clinicId, set: { screenLocale } })
 }
 
+/** Whether the clinic's desk picks the day and time of every booking, instead of the patient. */
+export async function getDeskSchedules(clinicId: string): Promise<boolean> {
+  const db = await getDb()
+  const [row] = await db.select({ on: clinicSettings.deskSchedules }).from(clinicSettings).where(eq(clinicSettings.clinicId, clinicId)).limit(1)
+  return row?.on ?? false
+}
+
+export async function setDeskSchedules(clinicId: string, deskSchedules: boolean) {
+  const db = await getDb()
+  await db
+    .insert(clinicSettings)
+    .values({ clinicId, deskSchedules })
+    .onConflictDoUpdate({ target: clinicSettings.clinicId, set: { deskSchedules } })
+}
+
 /** Accent of every clinic that has chosen one, for lists of clinic cards. */
 export async function getClinicAccents(): Promise<Record<string, AccentId>> {
   const db = await getDb()

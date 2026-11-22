@@ -16,8 +16,8 @@ import { randomId } from '@/lib/ids'
 import { hashPassword, isWeakPassword, verifyPasswordOrDummy } from '@/lib/password'
 import { getPrescription } from '@/lib/prescriptions'
 import { clearLimit, clientIp, hit, isLimited, overLimit } from '@/lib/rate-limit'
-import { setClinicAccent, setDoctorWhatsapp, setScreenLocale, setVisitMinutes } from '@/lib/settings'
-import { addWalkIn, changeTime, claimBooking, createBooking, getBooking, reorderQueue, setStatus, SlotTakenError, updateContact } from '@/lib/store'
+import { getDeskSchedules, setClinicAccent, setDeskSchedules, setDoctorWhatsapp, setScreenLocale, setVisitMinutes } from '@/lib/settings'
+import { addWalkIn, changeTime, claimBooking, createBooking, getBooking, markDatePending, reorderQueue, scheduleBooking, setStatus, SlotTakenError, updateContact } from '@/lib/store'
 
 export async function setLocale(formData: FormData) {
   const locale = formData.get('locale')
@@ -55,7 +55,9 @@ export async function requestBooking(formData: FormData) {
   const serviceIndex = Number(text(formData, 'service', 3))
   const service = doctor.services.length ? (doctor.services[serviceIndex] ?? null) : null
   if (doctor.services.length && (!service || !Number.isInteger(serviceIndex))) redirect(`${back}&error=missing`)
-  if (!patientName || !phone || !/^\d{4}-\d{2}-\d{2}$/.test(date) || (rawTime !== 'any' && !/^\d{2}:\d{2}$/.test(time))) {
+  // Some clinics' desks pick the day and time themselves: the patient only sends the request.
+  const deskPicks = await getDeskSchedules(doctor.clinicId)
+  if (!patientName || !phone || (!deskPicks && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || (rawTime !== 'any' && !/^\d{2}:\d{2}$/.test(time))))) {
     redirect(`${back}&error=missing`)
   }
   // Stops one person or script from filling a doctor's day with fake bookings.
@@ -71,7 +73,7 @@ export async function requestBooking(formData: FormData) {
   const prescriptionId = prescription?.doctorId === doctor.id ? prescription.id : null
   let booking: Awaited<ReturnType<typeof createBooking>>
   try {
-    booking = await createBooking({ doctorId, date, time, patientName, phone, note, service, userId: user?.id ?? null, prescriptionId })
+    booking = await createBooking({ doctorId, date, time: deskPicks ? null : time, patientName, phone, note, service, userId: user?.id ?? null, prescriptionId })
   } catch (err) {
     if (err instanceof SlotTakenError) redirect(`${back}&error=taken`)
     throw err
@@ -89,6 +91,8 @@ export async function updateBooking(formData: FormData) {
   const status = text(formData, 'status') as BookingStatus
   const booking = await getBooking(text(formData, 'id'))
   if (!booking || !allowedStatuses.includes(status) || !canUpdateBooking(user, booking, status)) return
+  // A request the desk schedules is approved by giving it a day and time (scheduleRequest).
+  if (booking.unscheduled && status !== 'cancelled') return
   await setStatus(booking, status, user.id)
   revalidatePath('/', 'layout')
 }
@@ -240,6 +244,39 @@ export async function updateScreenLocale(formData: FormData) {
   const screenLocale = text(formData, 'screenLocale')
   if (!getClinic(clinicId) || !isLocale(screenLocale) || !canManageClinic(user, clinicId)) return
   await setScreenLocale(clinicId, screenLocale)
+  revalidatePath('/', 'layout')
+}
+
+/** Whether patients pick their own day and time at this clinic, or the desk schedules every request. */
+export async function updateDeskSchedules(formData: FormData) {
+  const { getClinic } = await getCatalog()
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const clinicId = text(formData, 'clinicId')
+  if (!getClinic(clinicId) || !canManageClinic(user, clinicId)) return
+  await setDeskSchedules(clinicId, text(formData, 'mode') === 'desk')
+  revalidatePath('/', 'layout')
+}
+
+/** The desk gives a request the day and time the patient left to the clinic, and approves it. */
+export async function scheduleRequest(formData: FormData) {
+  const booking = await getBooking(text(formData, 'id'))
+  const user = booking && (await deskUserFor(booking.doctorId))
+  const date = text(formData, 'date', 10)
+  const time = clockTime(formData, 'time')
+  const back = text(formData, 'back', 300)
+  if (!booking || !user || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date < todayISO()) return
+  const ok = await scheduleBooking(booking, date, time, user.id)
+  revalidatePath('/', 'layout')
+  if (!ok) redirect(safeNext(`${back}${back.includes('?') ? '&' : '?'}taken=${booking.id}#b-${booking.id}`, '/assistant/requests'))
+}
+
+/** The assistant accepts a request but leaves its day for later ("Pending date"). */
+export async function markRequestDatePending(formData: FormData) {
+  const booking = await getBooking(text(formData, 'id'))
+  const user = booking && (await deskUserFor(booking.doctorId))
+  if (!booking || !user) return
+  await markDatePending(booking, user.id)
   revalidatePath('/', 'layout')
 }
 

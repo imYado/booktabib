@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { bookingTime } from '@/lib/booking-time'
+import { bookingTime, bookingWhen } from '@/lib/booking-time'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { logout } from '@/app/actions'
@@ -34,7 +34,7 @@ export default async function ProfilePage({ searchParams }: Props) {
   const today = todayISO()
   const [all, favoriteIds, accents] = await Promise.all([listBookings({ userId: user.id }), getFavoriteIds(), getClinicAccents()])
   // Ongoing: still waiting, confirmed or being seen, today or later. Everything else is history.
-  const ongoing = all.filter((b) => b.date >= today && (b.status === 'pending' || b.status === 'approved' || b.status === 'in_progress'))
+  const ongoing = all.filter((b) => (b.date >= today || b.unscheduled) && (b.status === 'pending' || b.status === 'approved' || b.status === 'in_progress'))
   const past = all.filter((b) => !ongoing.includes(b)).reverse()
   // Hearted clinics that have since been hidden drop out of the list.
   const visible = await getVisibleCatalog()
@@ -54,12 +54,10 @@ export default async function ProfilePage({ searchParams }: Props) {
               <div style={{ fontWeight: 500 }}>{getDoctor(b.doctorId)?.name[locale]}</div>
               <div className="meta">
                 <span>{getClinic(b.clinicId)?.name[locale]}</span>
-                <span>
-                  {formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b, true)}</span>
-                </span>
+                <span>{bookingWhen(locale, t, b, true)}</span>
               </div>
             </div>
-            <StatusPill status={b.status} t={t} />
+            <StatusPill status={b.status} t={t} datePending={b.datePending} />
           </Link>
         </li>
       ))}
@@ -141,7 +139,13 @@ export default async function ProfilePage({ searchParams }: Props) {
                       <span className="meta">
                         <span>{getDoctor(b.doctorId)?.name[locale]}</span>
                         <span>
-                          {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b, true)}</span>
+                          {b.unscheduled ? (
+                            b.datePending ? t.booking.datePending : t.booking.toBeScheduled
+                          ) : (
+                            <>
+                              {b.date === today ? t.doctorDash.today : formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b, true)}</span>
+                            </>
+                          )}
                         </span>
                         {b.ticket !== null && (
                           <span>
@@ -151,7 +155,7 @@ export default async function ProfilePage({ searchParams }: Props) {
                       </span>
                     </Link>
                     <div className="row" style={{ gap: 8 }}>
-                      <StatusPill status={b.status} t={t} />
+                      <StatusPill status={b.status} t={t} datePending={b.datePending} />
                       <Link href={`/q/${b.liveToken}`} className="btn btn-sm">
                         {t.account.openLive}
                         <Icon name="arrow" size={14} />

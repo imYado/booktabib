@@ -62,6 +62,12 @@ export const bookings = pgTable(
     // Booked with "no specific time": the patient takes a place in the line instead of a slot, and
     // `time` holds their estimated time, which follows the line as it changes.
     flexible: boolean('flexible').notNull().default(false),
+    // Sent to a clinic where the desk picks the day and time: the patient chose neither. Always 'pending'
+    // until an assistant schedules it, and kept out of every line and slot until then. `date` is the day
+    // it was requested and `time` a placeholder ('00:00').
+    unscheduled: boolean('unscheduled').notNull().default(false),
+    // An unscheduled request the assistant accepted but hasn't given a day yet ("Pending date").
+    datePending: boolean('date_pending').notNull().default(false),
     // The service the patient picked, copied from the doctor's list at booking time so later price changes don't alter it.
     service: jsonb('service').$type<BookedService>(),
     // Place in the day's line after an assistant reorders it, in minutes since midnight like the
@@ -74,10 +80,10 @@ export const bookings = pgTable(
       .default(sql`replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '')`),
   },
   (t) => [
-    // One active booking per doctor per slot; cancelled ones, walk-ins and no-specific-time bookings don't hold a slot.
+    // One active booking per doctor per slot; cancelled ones, walk-ins, no-specific-time and unscheduled bookings don't hold a slot.
     uniqueIndex('bookings_slot_unique')
       .on(t.doctorId, t.date, t.time)
-      .where(sql`${t.status} <> 'cancelled' and not ${t.walkIn} and not ${t.flexible}`),
+      .where(sql`${t.status} <> 'cancelled' and not ${t.walkIn} and not ${t.flexible} and not ${t.unscheduled}`),
     uniqueIndex('bookings_ticket_unique').on(t.clinicId, t.date, t.ticket),
     index('bookings_clinic_date_idx').on(t.clinicId, t.date),
     index('bookings_doctor_date_idx').on(t.doctorId, t.date),
@@ -187,6 +193,8 @@ export const clinicSettings = pgTable('clinic_settings', {
   accent: text('accent').notNull().default('paper'),
   // Language of the clinic's TV screen ('en', 'ar' or 'ckb'), whatever language the TV's browser is set to.
   screenLocale: text('screen_locale').notNull().default('ar'),
+  // Patients book without picking a day or time; the clinic's assistants schedule each request.
+  deskSchedules: boolean('desk_schedules').notNull().default(false),
 })
 
 export const doctorSettings = pgTable('doctor_settings', {
@@ -208,7 +216,7 @@ export const notifications = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     bookingId: text('booking_id').references(() => bookings.id, { onDelete: 'cascade' }),
     clinicId: text('clinic_id').notNull(),
-    // 'approved', 'arrive', 'turn', 'cancelled', 'done', 'moved', or 'renew7', 'renew3', 'renewDay' for prescriptions
+    // 'approved', 'datePending', 'arrive', 'turn', 'cancelled', 'done', 'moved', or 'renew7', 'renew3', 'renewDay' for prescriptions
     kind: text('kind').notNull(),
     ticket: integer('ticket'),
     // For 'arrive': the estimated time (HH:MM) the patient should be there. For 'moved': the new time.

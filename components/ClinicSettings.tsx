@@ -1,4 +1,4 @@
-import { updateClinicAccent, updateDoctorWhatsapp, updateScreenLocale, updateVisitMinutes } from '@/app/actions'
+import { updateClinicAccent, updateDeskSchedules, updateDoctorWhatsapp, updateScreenLocale, updateVisitMinutes } from '@/app/actions'
 import { accentIds, accents, type AccentId } from '@/lib/accents'
 import type { Clinic, Doctor } from '@/lib/data'
 import { localeNames, locales, type Dictionary, type Locale } from '@/lib/i18n'
@@ -83,6 +83,36 @@ export function ScreenLanguageField({ clinic, value, t }: { clinic: Clinic; valu
   )
 }
 
+/** Whether patients pick a day and time when they book, or only send a request that the desk schedules. */
+export function DeskSchedulesField({ clinic, value, t }: { clinic: Clinic; value: boolean; t: Dictionary }) {
+  return (
+    <form action={updateDeskSchedules} className="stack" style={{ '--stack': '12px' } as React.CSSProperties}>
+      <input type="hidden" name="clinicId" value={clinic.id} />
+      <fieldset>
+        <legend className="field-legend">{t.settings.deskSchedules}</legend>
+        <p className="caption" style={{ margin: '4px 0 0' }}>
+          {t.settings.deskSchedulesHint}
+        </p>
+        <div className="choices" style={{ marginTop: 12 }}>
+          <label className="choice">
+            <input type="radio" name="mode" value="patient" defaultChecked={!value} />
+            {t.settings.patientPicks}
+          </label>
+          <label className="choice">
+            <input type="radio" name="mode" value="desk" defaultChecked={value} />
+            {t.settings.deskPicks}
+          </label>
+        </div>
+      </fieldset>
+      <div>
+        <button type="submit" className="btn btn-secondary btn-sm">
+          {t.settings.save}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 /** How long one doctor's visits usually take, which sets the estimated times patients see. */
 export function VisitMinutesField({ doctor, value, label, t }: { doctor: Doctor; value: number; label: string; t: Dictionary }) {
   const id = `visit-${doctor.id}`
@@ -108,6 +138,7 @@ export function ClinicSettings({
   whatsapps,
   visitMinutes,
   screenLocale,
+  deskSchedules,
   canEditAccent,
   locale,
   t,
@@ -118,6 +149,7 @@ export function ClinicSettings({
   whatsapps: Record<string, string>
   visitMinutes: Record<string, number>
   screenLocale: Locale
+  deskSchedules: boolean
   canEditAccent: boolean
   locale: Locale
   t: Dictionary
@@ -131,6 +163,7 @@ export function ClinicSettings({
         </p>
       </div>
       {canEditAccent && <AccentPicker clinic={clinic} accent={accent} t={t} />}
+      {canEditAccent && <DeskSchedulesField clinic={clinic} value={deskSchedules} t={t} />}
       {canEditAccent && <ScreenLanguageField clinic={clinic} value={screenLocale} t={t} />}
       <div className="stack" style={{ '--stack': '12px' } as React.CSSProperties}>
         <p className="field-legend" style={{ margin: 0 }}>

@@ -10,12 +10,13 @@ const icons: Partial<Record<BookingStatus, 'clock' | 'check' | 'x' | 'user'>> = 
   cancelled: 'x',
 }
 
-export function StatusPill({ status, t }: { status: BookingStatus; t: Dictionary }) {
+/** A booking's status. `datePending`: a request the clinic accepted but hasn't given a day yet. */
+export function StatusPill({ status, t, datePending = false }: { status: BookingStatus; t: Dictionary; datePending?: boolean }) {
   const icon = icons[status]
   return (
     <span className={`pill pill-${status}`}>
       {icon && <Icon name={icon} size={14} />}
-      {t.status[status]}
+      {datePending && status === 'pending' ? t.status.datePending : t.status[status]}
     </span>
   )
 }

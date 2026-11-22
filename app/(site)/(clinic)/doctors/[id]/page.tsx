@@ -10,7 +10,7 @@ import { addDays, formatDay, formatNumber, formatTime, todayISO } from '@/lib/fo
 import { getCurrentUser } from '@/lib/auth'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
-import { getClinicAccent } from '@/lib/settings'
+import { getClinicAccent, getDeskSchedules } from '@/lib/settings'
 import { flexibleOpen, openSlots } from '@/lib/store'
 
 type Props = {
@@ -44,7 +44,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
   const renewal = rx && /^[A-Z2-9]{16}$/.test(rx) ? rx : ''
 
   const user = await getCurrentUser()
-  const accent = await getClinicAccent(clinic.id)
+  const [accent, deskPicks] = await Promise.all([getClinicAccent(clinic.id), getDeskSchedules(clinic.id)])
   const days = upcomingDays(7)
   const slotsByDay = await Promise.all(days.map((d) => openSlots(doctor.id, d)))
   const selected = day && days.includes(day) ? day : (days.find((d, i) => slotsByDay[i].length || flexibleOpen(d)) ?? days[0])
@@ -106,16 +106,31 @@ export default async function DoctorPage({ params, searchParams }: Props) {
         <div className="card" style={{ alignSelf: 'start' }}>
           <h2 style={{ fontSize: '1.5rem' }}>{t.doctorProfile.bookTitle}</h2>
 
-          <p className="field" style={{ margin: '20px 0 8px', fontWeight: 500 }}>
-            {t.doctorProfile.day}
-          </p>
-          <nav className="choices" aria-label={t.doctorProfile.day}>
-            {days.map((d) => (
-              <Link key={d} href={`?day=${d}${renewal ? `&rx=${renewal}` : ''}`} scroll={false} className="choice" aria-current={d === selected ? 'true' : undefined}>
-                {formatDay(locale, d, { month: 'numeric' })}
-              </Link>
-            ))}
-          </nav>
+          {deskPicks ? (
+            // This clinic's desk schedules every request: no day or time to pick here.
+            <div className="desk-picks" style={{ marginTop: 20 }}>
+              <Icon name="calendar" size={18} />
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>{t.doctorProfile.deskPicks}</p>
+                <p className="caption" style={{ margin: '4px 0 0' }}>
+                  {t.doctorProfile.deskPicksHint}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="field" style={{ margin: '20px 0 8px', fontWeight: 500 }}>
+                {t.doctorProfile.day}
+              </p>
+              <nav className="choices" aria-label={t.doctorProfile.day}>
+                {days.map((d) => (
+                  <Link key={d} href={`?day=${d}${renewal ? `&rx=${renewal}` : ''}`} scroll={false} className="choice" aria-current={d === selected ? 'true' : undefined}>
+                    {formatDay(locale, d, { month: 'numeric' })}
+                  </Link>
+                ))}
+              </nav>
+            </>
+          )}
 
           <form action={requestBooking} className="stack" style={{ '--stack': '20px', marginTop: 20 } as React.CSSProperties}>
             <input type="hidden" name="doctorId" value={doctor.id} />
@@ -138,45 +153,39 @@ export default async function DoctorPage({ params, searchParams }: Props) {
               </fieldset>
             )}
             {doctor.services.length === 1 && <input type="hidden" name="service" value="0" />}
-            <fieldset className="field">
-              <legend style={{ marginBottom: 8 }}>{t.doctorProfile.time}</legend>
-              {slots.length > 0 && (
-                <div className="choices">
-                  {slots.map((s, i) => (
-                    <label key={s} className="choice">
-                      <input type="radio" name="time" value={s} required defaultChecked={i === 0} />
-                      {formatTime(locale, s)}
-                    </label>
-                  ))}
-                </div>
-              )}
-              {!slots.length && <p className="caption">{t.doctorProfile.noSlots}</p>}
-              {anyTime && (
-                <>
-                  <div className="choices" style={{ marginTop: slots.length ? 8 : 0 }}>
-                    <label className="choice any-time-choice">
-                      <input type="radio" name="time" value="any" required defaultChecked={!slots.length} aria-describedby="any-time-hint" />
-                      <Icon name="clock" size={16} />
-                      {t.doctorProfile.anyTime}
-                    </label>
+            {!deskPicks && (
+              <fieldset className="field">
+                <legend style={{ marginBottom: 8 }}>{t.doctorProfile.time}</legend>
+                {slots.length > 0 && (
+                  <div className="choices">
+                    {slots.map((s, i) => (
+                      <label key={s} className="choice">
+                        <input type="radio" name="time" value={s} required defaultChecked={i === 0} />
+                        {formatTime(locale, s)}
+                      </label>
+                    ))}
                   </div>
-                  <p id="any-time-hint" className="caption" style={{ margin: '8px 0 0' }}>
-                    {t.doctorProfile.anyTimeHint}
-                  </p>
-                </>
-              )}
-            </fieldset>
+                )}
+                {!slots.length && <p className="caption">{t.doctorProfile.noSlots}</p>}
+                {anyTime && (
+                  <>
+                    <div className="choices" style={{ marginTop: slots.length ? 8 : 0 }}>
+                      <label className="choice any-time-choice">
+                        <input type="radio" name="time" value="any" required defaultChecked={!slots.length} aria-describedby="any-time-hint" />
+                        <Icon name="clock" size={16} />
+                        {t.doctorProfile.anyTime}
+                      </label>
+                    </div>
+                    <p id="any-time-hint" className="caption" style={{ margin: '8px 0 0' }}>
+                      {t.doctorProfile.anyTimeHint}
+                    </p>
+                  </>
+                )}
+              </fieldset>
+            )}
             <div className="field">
               <label htmlFor="patientName">{t.doctorProfile.name}</label>
-              <input
-                id="patientName"
-                name="patientName"
-                className="input"
-                required
-                maxLength={80}
-                autoComplete="name"
-                defaultValue={user?.role === 'patient' ? user.name : undefined}
-              />
+              <input id="patientName" name="patientName" className="input" required maxLength={80} autoComplete="name" defaultValue={user?.role === 'patient' ? user.name : undefined} />
             </div>
             <div className="field">
               <label htmlFor="phone">{t.doctorProfile.phone}</label>
@@ -202,7 +211,7 @@ export default async function DoctorPage({ params, searchParams }: Props) {
                 {error === 'taken' ? t.doctorProfile.taken : error === 'busy' ? t.auth.locked : t.auth.missing}
               </p>
             )}
-            <button className="btn btn-block" type="submit" disabled={!slots.length && !anyTime}>
+            <button className="btn btn-block" type="submit" disabled={!deskPicks && !slots.length && !anyTime}>
               <Icon name="calendar" />
               {t.doctorProfile.submit}
             </button>

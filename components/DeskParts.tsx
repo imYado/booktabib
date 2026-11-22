@@ -40,7 +40,7 @@ export function PatientRow({
           {doctorName && <span>{doctorName}</span>}
           {b.service && <span>{b.service.name[locale]}</span>}
           {b.phone && <span dir="ltr">{b.phone}</span>}
-          <StatusPill status={b.status} t={t} />
+          <StatusPill status={b.status} t={t} datePending={b.datePending} />
         </div>
       </div>
       <div className="actions row">{children}</div>
@@ -72,7 +72,7 @@ export function PatientEditor({ b, t }: { b: Booking; t: Dictionary }) {
           <label htmlFor={`phone-${b.id}`}>{t.assistant.phone}</label>
           <input id={`phone-${b.id}`} name="phone" type="tel" className="input" defaultValue={b.phone} maxLength={30} dir="ltr" />
         </div>
-        {(b.status === 'pending' || b.status === 'approved') && (
+        {(b.status === 'pending' || b.status === 'approved') && !b.unscheduled && (
           <div className="field">
             <label htmlFor={`time-${b.id}`}>{t.assistant.time}</label>
             <input id={`time-${b.id}`} name="time" type="time" step={300} className="input" defaultValue={b.flexible ? '' : b.time} dir="ltr" />
