@@ -11,10 +11,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `${t.assistant.tabRenewals} · ${t.assistant.title}`, robots: { index: false } }
 }
 
-/** Prescription renewals. Patients are reminded by notifications on the site; the desk only keeps the list. */
+/** Prescription renewals: the site notifies patients with an account, and the desk can message anyone on WhatsApp. */
 export default async function AssistantRenewalsPage({ searchParams }: { searchParams: DeskQuery }) {
   const desk = await loadDesk(searchParams, 'renewals')
-  const { clinic, doctorId, myDoctors, locale, t, today, suffix, query } = desk
+  const { clinic, doctorId, myDoctors, locale, t, today, suffix, query, origin } = desk
   const [renewals, recent] = await Promise.all([
     listRenewals(clinic.id, doctorId),
     listBookings({ clinicId: clinic.id, doctorId, fromDate: addDays(today, -90), status: ['pending', 'approved', 'in_progress', 'done'] }),
@@ -26,6 +26,8 @@ export default async function AssistantRenewalsPage({ searchParams }: { searchPa
         rows={renewals}
         doctors={myDoctors}
         recent={recent.filter((b) => b.date <= addDays(today, 30))}
+        clinicName={clinic.name.ar}
+        origin={origin}
         back={`/assistant/renewals${suffix}`}
         flag={query.renew}
         locale={locale}

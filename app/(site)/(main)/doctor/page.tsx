@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { Avatar } from '@/components/Avatar'
 import { VisitMinutesField, WhatsappField } from '@/components/ClinicSettings'
 import { PickerForm } from '@/components/PickerForm'
@@ -47,6 +48,8 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
     visitLengths(doctor.id, pastDays),
     returnRates(doctor.id, today),
   ])
+  const h = await headers()
+  const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host')}`
   const back = user.role === 'admin' ? `/doctor?doctor=${doctor.id}` : '/doctor'
   const todays = mine.filter((b) => b.date === today && b.status !== 'pending' && b.status !== 'cancelled')
   const waiting = todays.filter((b) => b.status === 'approved')
@@ -290,6 +293,8 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
           rows={renewals}
           doctors={[doctor]}
           recent={recent.filter((b) => b.date <= addDays(today, 30))}
+          clinicName={clinic.name.ar}
+          origin={origin}
           back={back}
           flag={query.renew}
           locale={locale}
