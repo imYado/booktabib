@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, gte, inArray, isNotNull, ne, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNotNull, ne, or, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { bookings, notifications, type BookedService, type Booking, type BookingStatus } from '@/db/schema'
 import { getCatalog } from './catalog'
@@ -25,7 +25,10 @@ type Filter = {
   doctorId?: string
   userId?: string
   date?: string
+  /** From this day on. Requests still waiting for the desk to schedule them are always included. */
   fromDate?: string
+  /** Leave out requests the desk hasn't scheduled yet (they have no real day or time). */
+  scheduledOnly?: boolean
   status?: BookingStatus | BookingStatus[]
 }
 
@@ -35,7 +38,8 @@ export async function listBookings(filter: Filter = {}): Promise<Booking[]> {
   if (filter.doctorId) where.push(eq(bookings.doctorId, filter.doctorId))
   if (filter.userId) where.push(eq(bookings.userId, filter.userId))
   if (filter.date) where.push(eq(bookings.date, filter.date))
-  if (filter.fromDate) where.push(gte(bookings.date, filter.fromDate))
+  if (filter.fromDate) where.push(or(gte(bookings.date, filter.fromDate), eq(bookings.unscheduled, true))!)
+  if (filter.scheduledOnly || filter.date) where.push(eq(bookings.unscheduled, false))
   if (filter.status) {
     where.push(Array.isArray(filter.status) ? inArray(bookings.status, filter.status) : eq(bookings.status, filter.status))
   }
@@ -82,7 +86,7 @@ export async function openSlots(doctorId: string, date: string): Promise<string[
     db
       .select({ time: bookings.time })
       .from(bookings)
-      .where(and(eq(bookings.doctorId, doctorId), eq(bookings.date, date), ne(bookings.status, 'cancelled'), eq(bookings.flexible, false))),
+      .where(and(eq(bookings.doctorId, doctorId), eq(bookings.date, date), ne(bookings.status, 'cancelled'), eq(bookings.flexible, false), eq(bookings.unscheduled, false))),
     dayLine(doctorId, date),
     getVisitMinutes([doctorId]),
   ])
@@ -101,14 +105,17 @@ export function flexibleOpen(date: string) {
 
 /** Everyone expected in a doctor's line on a day, in line order: requests, waiting and with the doctor. */
 function dayLine(doctorId: string, date: string) {
-  return listBookings({ doctorId, date, status: ['pending', 'approved', 'in_progress'] })
+  return listBookings({ doctorId, date, status: ['pending', 'approved', 'in_progress'], scheduledOnly: true })
 }
 
 export async function createBooking(input: {
   doctorId: string
   date: string
-  /** HH:MM, or '' for no specific time: the booking gets a place in the line and an estimated time. */
-  time: string
+  /**
+   * HH:MM, or '' for no specific time: the booking gets a place in the line and an estimated time.
+   * `null` when the clinic's desk picks the day and time: the request waits, unscheduled, for an assistant.
+   */
+  time: string | null
   patientName: string
   phone: string
   note: string
@@ -119,6 +126,13 @@ export async function createBooking(input: {
   const doctor = (await getCatalog()).getDoctor(input.doctorId)
   if (!doctor) throw new Error('Unknown doctor')
   const db = await getDb()
+  if (input.time === null) {
+    const [row] = await db
+      .insert(bookings)
+      .values({ ...input, date: todayISO(), time: '00:00', unscheduled: true, id: randomId(10, 'BT'), clinicId: doctor.clinicId })
+      .returning()
+    return row
+  }
   if (!input.time) {
     if (!flexibleOpen(input.date)) throw new SlotTakenError()
     const place = await flexiblePlace(doctor.id, input.date)
@@ -133,7 +147,7 @@ export async function createBooking(input: {
   try {
     const [row] = await db
       .insert(bookings)
-      .values({ ...input, id: randomId(10, 'BT'), clinicId: doctor.clinicId })
+      .values({ ...input, time: input.time, id: randomId(10, 'BT'), clinicId: doctor.clinicId })
       .returning()
     await refreshFlexibleTimes(doctor.id, input.date)
     return row
@@ -209,6 +223,28 @@ export async function setStatus(booking: Booking, status: BookingStatus, actorId
   if (booking.date === todayISO()) await remindArrivals(booking.doctorId)
 }
 
+/**
+ * Gives a request the desk schedules its day and time, and approves it. An empty `time` puts the
+ * patient in that day's line with no specific time. Returns false when another patient holds that slot.
+ */
+export async function scheduleBooking(booking: Booking, date: string, time: string, actorId?: string) {
+  if (!booking.unscheduled || booking.status !== 'pending') return true
+  const db = await getDb()
+  const place = time ? { time, position: null, flexible: false } : { ...(await flexiblePlace(booking.doctorId, date)), flexible: true }
+  try {
+    await db
+      .update(bookings)
+      .set({ date, ...place, unscheduled: false })
+      .where(and(eq(bookings.id, booking.id), eq(bookings.unscheduled, true)))
+  } catch (err) {
+    if (isUniqueViolation(err)) return false
+    throw err
+  }
+  const scheduled = await getBooking(booking.id)
+  if (scheduled) await setStatus(scheduled, 'approved', actorId)
+  return true
+}
+
 /** The patients currently with a doctor at a clinic today, most recently called first. */
 export async function nowServing(clinicId: string, date: string) {
   const db = await getDb()
@@ -281,7 +317,7 @@ export async function addWalkIn(input: { doctorId: string; patientName: string; 
  * If another patient already holds that slot both keep it, and this one stops holding a slot of its own.
  */
 export async function changeTime(booking: Booking, time: string, actorId?: string) {
-  if (booking.time === time || (booking.status !== 'pending' && booking.status !== 'approved')) return
+  if (booking.unscheduled || booking.time === time || (booking.status !== 'pending' && booking.status !== 'approved')) return
   const db = await getDb()
   try {
     await db.update(bookings).set({ time, position: null, flexible: false }).where(eq(bookings.id, booking.id))

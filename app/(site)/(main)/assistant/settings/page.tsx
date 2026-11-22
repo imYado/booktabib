@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { ClinicSettings } from '@/components/ClinicSettings'
 import { canManageClinic } from '@/lib/auth'
 import { getI18n } from '@/lib/locale'
-import { getClinicAccent, getDoctorWhatsapps, getScreenLocale, getVisitMinutes } from '@/lib/settings'
+import { getClinicAccent, getDeskSchedules, getDoctorWhatsapps, getScreenLocale, getVisitMinutes } from '@/lib/settings'
 import { DeskShell, loadDesk, type DeskQuery } from '../desk'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,9 +15,10 @@ export default async function AssistantSettingsPage({ searchParams }: { searchPa
   const desk = await loadDesk(searchParams, 'settings')
   const { clinic, myDoctors, user, locale, t } = desk
   const ids = myDoctors.map((d) => d.id)
-  const [accent, screenLocale, whatsapps, visitMinutes] = await Promise.all([
+  const [accent, screenLocale, deskSchedules, whatsapps, visitMinutes] = await Promise.all([
     getClinicAccent(clinic.id),
     getScreenLocale(clinic.id),
+    getDeskSchedules(clinic.id),
     getDoctorWhatsapps(ids),
     getVisitMinutes(ids),
   ])
@@ -31,6 +32,7 @@ export default async function AssistantSettingsPage({ searchParams }: { searchPa
         whatsapps={whatsapps}
         visitMinutes={visitMinutes}
         screenLocale={screenLocale}
+        deskSchedules={deskSchedules}
         canEditAccent={canManageClinic(user, clinic.id)}
         locale={locale}
         t={t}

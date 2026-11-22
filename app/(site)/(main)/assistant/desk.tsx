@@ -13,7 +13,7 @@ import { listRenewals } from '@/lib/prescriptions'
 import { listBookings, type Booking } from '@/lib/store'
 import { whatsappLink, whatsappText } from '@/lib/whatsapp'
 
-export type DeskQuery = Promise<{ clinic?: string; renew?: string }>
+export type DeskQuery = Promise<{ clinic?: string; renew?: string; taken?: string }>
 type Section = 'today' | 'requests' | 'renewals' | 'settings'
 
 const paths: Record<Section, string> = {

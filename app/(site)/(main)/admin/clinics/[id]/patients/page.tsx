@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { bookingTime } from '@/lib/booking-time'
+import { bookingWhen } from '@/lib/booking-time'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { desc, eq } from 'drizzle-orm'
@@ -13,7 +13,7 @@ import { getDb } from '@/db'
 import { bookings } from '@/db/schema'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { formatDay, localDigits } from '@/lib/format'
+import { localDigits } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }
@@ -65,7 +65,7 @@ export default async function ClinicPatientsPage({ params, searchParams }: Props
                         <div className="meta">
                           <span>
                             <Icon name="calendar" size={14} />
-                            {formatDay(locale, b.date)} · <span>{bookingTime(locale, t, b)}</span>
+                            {bookingWhen(locale, t, b)}
                           </span>
                           <span>{getDoctor(b.doctorId)?.name[locale]}</span>
                           <span dir="ltr">{b.phone}</span>

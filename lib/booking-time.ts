@@ -1,4 +1,4 @@
-import { formatTime } from './format'
+import { formatDay, formatTime } from './format'
 import type { Dictionary, Locale } from './i18n'
 
 /** Patients are shown an estimated time this many minutes before the real estimate, so they arrive in time. */
@@ -20,4 +20,19 @@ export function patientTime(hhmm: string) {
 export function bookingTime(locale: Locale, t: Dictionary, b: { time: string; flexible: boolean }, forPatient = false) {
   if (!b.flexible) return formatTime(locale, b.time)
   return t.booking.about(formatTime(locale, forPatient ? patientTime(b.time) : b.time))
+}
+
+/**
+ * Day and time together ("Tue 3/12 · 10:30"), or, for a request the clinic's desk still has to
+ * schedule, a line saying the clinic will set them.
+ */
+export function bookingWhen(
+  locale: Locale,
+  t: Dictionary,
+  b: { date: string; time: string; flexible: boolean; unscheduled: boolean },
+  forPatient = false,
+  dayOptions: Intl.DateTimeFormatOptions = {},
+) {
+  if (b.unscheduled) return t.booking.toBeScheduled
+  return `${formatDay(locale, b.date, dayOptions)} · ${bookingTime(locale, t, b, forPatient)}`
 }

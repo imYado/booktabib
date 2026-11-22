@@ -2967,3 +2967,33 @@ dl.details dd {
 .any-time-choice:has(input:checked) {
   border-style: solid;
 }
+
+/* Doctor page, at a clinic whose desk picks the day and time: in place of the day and time pickers. */
+.desk-picks {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.desk-picks .icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* Requests page: the day and time an assistant gives a request the patient left to the clinic. */
+.schedule-form {
+  display: grid;
+  gap: 8px 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+}
+@media (min-width: 640px) {
+  .schedule-form {
+    grid-template-columns: minmax(0, 200px) minmax(0, 160px) auto;
+    justify-content: start;
+  }
+}

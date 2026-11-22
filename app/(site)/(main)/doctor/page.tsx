@@ -55,7 +55,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const waiting = todays.filter((b) => b.status === 'approved')
   const seen = todays.filter((b) => b.status === 'done')
   const current = todays.find((b) => b.status === 'in_progress')
-  const pending = mine.filter((b) => b.status === 'pending' && b.date >= today)
+  const pending = mine.filter((b) => b.status === 'pending' && (b.date >= today || b.unscheduled))
   const estimates = estimateLine(todays, visitMinutes[doctor.id], nowMinutes())
 
   const d = t.doctorDash
@@ -63,7 +63,7 @@ export default async function DoctorDashboard({ searchParams }: { searchParams: 
   const weekday = (date: string) => formatDay(locale, date, { day: undefined, month: undefined })
   const week = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(today, i)
-    const count = mine.filter((b) => b.date === date && b.status !== 'cancelled').length
+    const count = mine.filter((b) => b.date === date && b.status !== 'cancelled' && !b.unscheduled).length
     return { key: date, label: weekday(date), value: count, text: n(count), highlight: date === today }
   })
   const visitBars = lengths.days.map((day) => ({
