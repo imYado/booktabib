@@ -4,17 +4,21 @@ import type { Doctor } from '@/lib/data'
 import { addDays, formatDay, todayISO } from '@/lib/format'
 import type { Dictionary, Locale } from '@/lib/i18n'
 import type { RenewalRow } from '@/lib/prescriptions'
+import { whatsappLink, whatsappText } from '@/lib/whatsapp'
 import { Icon } from './Icon'
 
 /**
  * Prescription renewals on the desk and the doctor's dashboard: who needs a new prescription in the
- * next 7 days, whether the site has notified them, and a form to add one. Patients are only reminded
- * through notifications on the site; nobody on the staff messages them.
+ * next 7 days, whether the site has notified them, and a form to add one. Patients with an account
+ * are reminded by notifications on the site; staff can also message any patient on WhatsApp with a
+ * ready-made Arabic reminder that links to the doctor's booking page.
  */
 export function RenewalsPanel({
   rows,
   doctors,
   recent,
+  clinicName,
+  origin,
   back,
   flag,
   locale,
@@ -23,6 +27,9 @@ export function RenewalsPanel({
   rows: RenewalRow[]
   doctors: Doctor[]
   recent: Booking[]
+  /** The clinic's Arabic name, for the WhatsApp message. */
+  clinicName: string
+  origin: string
   back: string
   flag?: string
   locale: Locale
@@ -35,44 +42,54 @@ export function RenewalsPanel({
   const doctorName = (id: string) => doctors.find((d) => d.id === id)?.name[locale] ?? ''
   const when = (p: RenewalRow) => (p.daysLeft === 0 ? r.today : p.daysLeft < 0 ? r.overdue(-p.daysLeft) : r.inDays(p.daysLeft))
 
-  const row = (p: RenewalRow) => (
-    <li key={p.id} className="renewal">
-      <div className="renewal-main">
-        <div style={{ fontWeight: 500 }}>{p.patientName}</div>
-        <div className="meta">
-          <span className={p.daysLeft <= 0 ? 'renewal-due' : undefined}>
-            <Icon name="calendar" size={14} />
-            {formatDay(locale, p.renewOn)} · {when(p)}
-          </span>
-          {doctors.length > 1 && <span>{doctorName(p.doctorId)}</span>}
-          {p.phone && <span dir="ltr">{p.phone}</span>}
-        </div>
-        <div className="renewal-flags">
-          {(!p.userId || p.appSentAt || !p.booked) && (
-            <span className={p.appSentAt ? 'flag flag-on' : 'flag'}>
-              {p.userId && <Icon name="bell" size={12} />}
-              {!p.userId ? r.noAccount : p.appSentAt ? r.appSent : r.appLater}
+  const row = (p: RenewalRow) => {
+    // The link carries the prescription, so booking through it counts as a return even from a new account.
+    const wa = whatsappLink(p.phone, whatsappText.renewal(p.patientName, clinicName, p.renewOn, `${origin}/doctors/${p.doctorId}?rx=${p.id}`))
+    return (
+      <li key={p.id} className="renewal">
+        <div className="renewal-main">
+          <div style={{ fontWeight: 500 }}>{p.patientName}</div>
+          <div className="meta">
+            <span className={p.daysLeft <= 0 ? 'renewal-due' : undefined}>
+              <Icon name="calendar" size={14} />
+              {formatDay(locale, p.renewOn)} · {when(p)}
             </span>
-          )}
-          {p.booked && (
-            <span className="flag flag-on">
-              <Icon name="check" size={12} />
-              {r.booked}
-            </span>
-          )}
+            {doctors.length > 1 && <span>{doctorName(p.doctorId)}</span>}
+            {p.phone && <span dir="ltr">{p.phone}</span>}
+          </div>
+          <div className="renewal-flags">
+            {(!p.userId || p.appSentAt || !p.booked) && (
+              <span className={p.appSentAt ? 'flag flag-on' : 'flag'}>
+                {p.userId && <Icon name="bell" size={12} />}
+                {!p.userId ? r.noAccount : p.appSentAt ? r.appSent : r.appLater}
+              </span>
+            )}
+            {p.booked && (
+              <span className="flag flag-on">
+                <Icon name="check" size={12} />
+                {r.booked}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="row renewal-actions">
-        <form action={closeRenewal}>
-          <input type="hidden" name="id" value={p.id} />
-          <button type="submit" className="btn btn-go btn-sm">
-            <Icon name="check" size={16} />
-            {r.renewed}
-          </button>
-        </form>
-      </div>
-    </li>
-  )
+        <div className="row renewal-actions">
+          {wa && (
+            <a className="btn btn-sm btn-info" href={wa} target="_blank" rel="noopener noreferrer">
+              <Icon name="send" size={16} />
+              {r.whatsapp}
+            </a>
+          )}
+          <form action={closeRenewal}>
+            <input type="hidden" name="id" value={p.id} />
+            <button type="submit" className="btn btn-go btn-sm">
+              <Icon name="check" size={16} />
+              {r.renewed}
+            </button>
+          </form>
+        </div>
+      </li>
+    )
+  }
 
   // Each patient seen in the last 90 days or booked in the next 30, once, latest booking first.
   const seen = new Set<string>()

@@ -7,7 +7,7 @@ import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { InstallGuideMount } from '@/components/InstallGuideMount'
 import { getCatalog } from '@/lib/catalog'
-import { whatsappNumber } from '@/lib/data'
+import { whatsappLink, whatsappText } from '@/lib/whatsapp'
 import { formatDay, formatTime, localDigits, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
 import { getCurrentUser } from '@/lib/auth'
@@ -63,7 +63,7 @@ export default async function LiveQueuePage({ params }: { params: Promise<{ toke
   const { lat, lng } = clinic?.location ?? { lat: 0, lng: 0 }
   // WhatsApp goes to the doctor's own number when the clinic set one, otherwise to the clinic.
   const contact = await contactNumberFor(booking.doctorId)
-  const wa = contact ? `https://wa.me/${whatsappNumber(contact)}?text=${encodeURIComponent(t.live.whatsappText(booking.ticket))}` : null
+  const wa = contact ? whatsappLink(contact, whatsappText.toClinic(booking.ticket)) : null
   const accent = await getClinicAccent(booking.clinicId)
 
   return (

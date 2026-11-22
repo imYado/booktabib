@@ -7,11 +7,11 @@ import { PickerForm } from '@/components/PickerForm'
 import { SendLink } from '@/components/SendLink'
 import { requireUser } from '@/lib/auth'
 import { getCatalog } from '@/lib/catalog'
-import { whatsappNumber } from '@/lib/data'
 import { localDigits, todayISO } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
 import { listRenewals } from '@/lib/prescriptions'
 import { listBookings, type Booking } from '@/lib/store'
+import { whatsappLink, whatsappText } from '@/lib/whatsapp'
 
 export type DeskQuery = Promise<{ clinic?: string; renew?: string }>
 type Section = 'today' | 'requests' | 'renewals' | 'settings'
@@ -48,12 +48,10 @@ export type Desk = Awaited<ReturnType<typeof loadDesk>>
 export function LinkButtons({ desk, b }: { desk: Desk; b: Booking }) {
   const { t, origin } = desk
   const url = `${origin}/q/${b.liveToken}`
-  const phone = whatsappNumber(b.phone)
-  const message = t.assistant.linkMessage.replace('{name}', b.patientName).replace('{url}', url)
   return (
     <SendLink
       url={url}
-      whatsappHref={phone.length >= 8 ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : null}
+      whatsappHref={whatsappLink(b.phone, whatsappText.liveLink(b.patientName, url))}
       sendLabel={t.assistant.sendLink}
       copyLabel={t.assistant.copyLink}
       copiedLabel={t.assistant.copied}
