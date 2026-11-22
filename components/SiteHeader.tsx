@@ -2,6 +2,7 @@ import Link from 'next/link'
 import BrandWord from './BrandWord'
 import { Icon } from '@/components/Icon'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { PhoneVerifyBanner } from '@/components/PhoneVerifyBanner'
 import { getCurrentUser } from '@/lib/auth'
 import { localDigits } from '@/lib/format'
 import { getI18n } from '@/lib/locale'
@@ -21,29 +22,32 @@ export async function SiteHeader({ minimal = false }: { minimal?: boolean }) {
   if (user) await deliverRenewalReminders(user.id)
   const unread = user ? await unreadCount(user.id) : 0
   return (
-    <header className={minimal ? 'site-header site-header-minimal' : 'site-header'}>
-      <div className="container">
-        <Link href={minimal && !user ? '/login' : '/'} className="brand" lang="en">
-          <BrandWord text={t.brand} />
-        </Link>
-        <nav className="nav" aria-label="Main">
-          {!minimal && (
-            <>
-              <Link href="/clinics">{t.nav.clinics}</Link>
-              {(role === 'assistant' || role === 'admin') && <Link href="/assistant">{t.nav.assistant}</Link>}
-              {(role === 'doctor' || role === 'admin') && <Link href="/doctor">{t.nav.doctor}</Link>}
-              {role === 'admin' && <Link href="/admin">{t.nav.admin}</Link>}
-            </>
-          )}
-          {user && <NotificationBell unread={unread} label={t.notifications.title} unreadLabel={t.notifications.unread(unread)} locale={locale} />}
-          {/* Signed in, the button slot opens the profile, where Log out lives. */}
-          <Link href={user ? '/account' : '/login'} className="btn btn-secondary btn-sm">
-            {user ? t.nav.account : t.nav.login}
+    <>
+      <header className={minimal ? 'site-header site-header-minimal' : 'site-header'}>
+        <div className="container">
+          <Link href={minimal && !user ? '/login' : '/'} className="brand" lang="en">
+            <BrandWord text={t.brand} />
           </Link>
-        </nav>
-        <LanguageSwitcher locale={locale} label={t.common.switchTo} />
-      </div>
-    </header>
+          <nav className="nav" aria-label="Main">
+            {!minimal && (
+              <>
+                <Link href="/clinics">{t.nav.clinics}</Link>
+                {(role === 'assistant' || role === 'admin') && <Link href="/assistant">{t.nav.assistant}</Link>}
+                {(role === 'doctor' || role === 'admin') && <Link href="/doctor">{t.nav.doctor}</Link>}
+                {role === 'admin' && <Link href="/admin">{t.nav.admin}</Link>}
+              </>
+            )}
+            {user && <NotificationBell unread={unread} label={t.notifications.title} unreadLabel={t.notifications.unread(unread)} locale={locale} />}
+            {/* Signed in, the button slot opens the profile, where Log out lives. */}
+            <Link href={user ? '/account' : '/login'} className="btn btn-secondary btn-sm">
+              {user ? t.nav.account : t.nav.login}
+            </Link>
+          </nav>
+          <LanguageSwitcher locale={locale} label={t.common.switchTo} />
+        </div>
+      </header>
+      {user && <PhoneVerifyBanner user={user} t={t} />}
+    </>
   )
 }
 

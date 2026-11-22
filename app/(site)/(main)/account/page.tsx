@@ -15,6 +15,7 @@ import { getFavoriteIds } from '@/lib/favorites'
 import { formatDay, localDigits, todayISO } from '@/lib/format'
 import { accentStyle } from '@/lib/accents'
 import { getI18n } from '@/lib/locale'
+import { isPhoneVerified } from '@/lib/phone-verification'
 import { getClinicAccents } from '@/lib/settings'
 import { listBookings, type Booking } from '@/lib/store'
 import { isTheme, THEME_COOKIE } from '@/lib/theme'
@@ -180,7 +181,15 @@ export default async function ProfilePage({ searchParams }: Props) {
               <input id="p-name" name="name" className="input" defaultValue={user.name} required maxLength={80} autoComplete="name" />
             </div>
             <div className="field">
-              <label htmlFor="p-phone">{p.phone}</label>
+              <label htmlFor="p-phone">
+                {p.phone}
+                {user.phone && user.role !== 'admin' && (
+                  <span className="phone-status">
+                    {isPhoneVerified(user) && <Icon name="check" size={14} />}
+                    {isPhoneVerified(user) ? t.phoneVerify.verified : t.phoneVerify.unverified}
+                  </span>
+                )}
+              </label>
               <input id="p-phone" name="phone" type="tel" className="input" defaultValue={user.phone} maxLength={30} dir="ltr" autoComplete="tel" />
             </div>
             <div className="field">

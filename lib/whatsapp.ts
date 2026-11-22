@@ -15,6 +15,9 @@ export const whatsappText = {
   /** From the desk or the doctor to a patient whose prescription needs renewing. */
   renewal: (name: string, clinic: string, renewOn: string, url: string) =>
     `مرحباً ${name}، معك ${clinic}. وصفتك الطبية تحتاج إلى تجديد يوم ${formatDay('ar', renewOn, { weekday: 'long', month: 'long' })}. يرجى حجز زيارة قبل ذلك من هنا: ${url}`,
+  /** From a user to the booktabib administrator, asking to have their phone number verified. */
+  verifyPhone: (name: string, phone: string, email: string) =>
+    `مرحباً، أرجو تأكيد رقم هاتفي على booktabib.\nالرقم: ${phone}\nالاسم: ${name}\nالبريد: ${email}`,
 }
 
 /** A wa.me link that opens a chat with `phone` and the message typed in, or null if the number is too short. */

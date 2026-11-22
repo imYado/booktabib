@@ -11,6 +11,7 @@ import { MAX_GALLERY, isCity, isHonorific, isSpecialty } from '@/lib/data'
 import { locales, type Localized } from '@/lib/i18n'
 import { randomId } from '@/lib/ids'
 import { hashPassword } from '@/lib/password'
+import { clearPhoneVerified, markPhoneVerified } from '@/lib/phone-verification'
 
 // Edit mode for administrators: clinics, doctors, staff accounts and bookings.
 
@@ -439,4 +440,27 @@ export async function deleteBooking(formData: FormData) {
   const db = await getDb()
   const [row] = await db.delete(bookings).where(eq(bookings.id, id)).returning({ clinicId: bookings.clinicId })
   done(row ? `/admin/clinics/${row.clinicId}/patients` : '/admin/clinics')
+}
+
+/** Marks an account's current phone number as verified, after the person asked on WhatsApp. */
+export async function verifyPhone(formData: FormData) {
+  await requireAdmin()
+  const db = await getDb()
+  const [account] = await db.select({ id: users.id, phone: users.phone }).from(users).where(eq(users.id, text(formData, 'id', 40))).limit(1)
+  if (account?.phone) await markPhoneVerified(account.id, account.phone, 'admin')
+  revalidatePath('/', 'layout')
+  redirect(`/admin/phones?saved=verified${backQuery(formData)}`)
+}
+
+/** Takes a verification back, for example one marked by mistake. */
+export async function unverifyPhone(formData: FormData) {
+  await requireAdmin()
+  await clearPhoneVerified(text(formData, 'id', 40))
+  revalidatePath('/', 'layout')
+  redirect(`/admin/phones?saved=unverified${backQuery(formData)}`)
+}
+
+function backQuery(formData: FormData) {
+  const q = text(formData, 'q', 100)
+  return q ? `&q=${encodeURIComponent(q)}` : ''
 }
